@@ -6,6 +6,15 @@ import os
 from utils import get_path
 
 
+def draw_pie(subfolders):
+	labels = list(subfolders.keys())
+	numbers = list(subfolders.values())
+
+	plt.pie(numbers, labels=labels, autopct="%1.1f%%", startangle=90)
+	plt.title("Distribution of images of the dataset")
+	plt.show()
+
+
 def count_images(dataset: str):
 	subfolders = {}
 	for subfolder in os.listdir(dataset):
@@ -34,15 +43,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main():
 	# OK take as argument a directory
 	# fetches images in the directory
-	# Va check chaque nom de dossier, prendre tout avant le premier _ et en faire un executable.
-	# each executable display a pie graph of the number of images inside each subdirectories.
 	# should work with every directories
 
 	parser = build_parser()
 	args = parser.parse_args()
 
 	subfolders = count_images(args.data)
-	print(subfolders)
+	
+	draw_pie(subfolders)
 
 if __name__ == "__main__":
 	main()
