@@ -9,9 +9,10 @@ import argparse
 from utils import get_path, count_images
 
 
-#TODO dict of augmentation and name so we apply in a loop and give the right name
+#TODO the Augmentation folder call the delete folder before doing anything just in case
 #TODO highest - nb of images in the folder then we do the for loop in the range.
 #TODO construct train and test folders before doing the augmentation.
+#TODO make the creation of Apple and Grape folders before doing anything
 
 
 AUGMENTATIONS = {
@@ -31,36 +32,38 @@ def _get_highest_nb_of_images(subfolders) -> int:
 def augment_images_until_equal(main_dir, subfolders):
 	highest = _get_highest_nb_of_images(subfolders)
 
-	transforms = T.Compose([
-		T.RandomPerspective(distortion_scale=0.3, p=1.0),
-		T.ToTensor(),
-	])
+	for transformation_name, transformation in AUGMENTATIONS.items():
+		transforms = T.Compose([
+			transformation,
+			T.ToTensor(),
+		])
 
+		for subfolder in subfolders.keys():
+			path = os.path.join(main_dir, subfolder)
 
-	for subfolder in subfolders.keys():
-		path = os.path.join(main_dir, subfolder)
+			files = [f for f in os.listdir(path)
+					if f.lower().endswith((".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff"))]
+			if not files:
+				continue
 
-		files = [f for f in os.listdir(path)
-				 if f.lower().endswith((".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff"))]
-		if not files:
-			continue
+			for filename in sorted(files):
+				filepath = os.path.join(path, filename)
 
-		filename = sorted(files)[0]
-		filepath = os.path.join(path, filename)
+				img = Image.open(filepath).convert("RGB")
+				augmentation = transforms(img)
 
-		img = Image.open(filepath).convert("RGB")
-		augmentation = transforms(img)
+				name, ext = os.path.splitext(filename)
 
-		name, ext = os.path.splitext(filename)
-		new_name = f"{name}_aug_{ext}"
-		new_path = os.path.join(path, new_name)
+				
+				if "_" in name:
+					base, maybe_suffix = name.rsplit("_", 1)
+					if os.path.exists(os.path.join(path, base + ext)):
+						continue
 
-		save_image(augmentation, new_path)
+				new_name = f"{name}_" + transformation_name + f"{ext}"
+				new_path = os.path.join(path, new_name)
 
-		return new_path
-		
-
-
+				save_image(augmentation, new_path)
 
 
 def build_parser() -> argparse.ArgumentParser:
