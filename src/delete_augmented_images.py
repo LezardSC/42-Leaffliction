@@ -49,6 +49,8 @@ def parse_args():
 
 
 def delete_augmented_images():
+	print("Deleting all augmented images...")
+
 	args = parse_args()
 	root = Path(args.root).resolve()
 	deleted = 0
