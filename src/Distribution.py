@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import os
 
-from utils import get_path
+from utils import get_path, count_images
 
 
 def draw_distribution(subfolders):
@@ -27,25 +27,13 @@ def draw_distribution(subfolders):
 	plt.show()
 
 
-def count_images(dataset: str):
-	subfolders = {}
-	for subfolder in os.listdir(dataset):
-		path = os.path.join(dataset, subfolder)
-		if os.path.isdir(path):
-			files = [f for f in os.listdir(path)]
-			count = len(files)
-			subfolders[subfolder] = count
-
-	return subfolders
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "-d", "--data",
         type=str,
-        default=get_path("images/"),
+        default=get_path("Apple/"),
         help="The path to the dataset."
     )
 
@@ -53,16 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main():
-	# OK take as argument a directory
-	# fetches images in the directory
-	# should work with every directories
-
-	parser = build_parser()
-	args = parser.parse_args()
-
+	args = build_parser().parse_args()
 	subfolders = count_images(args.data)
-	
+
 	draw_distribution(subfolders)
+
 
 if __name__ == "__main__":
 	main()
