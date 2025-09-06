@@ -7,6 +7,7 @@ from torchvision.utils import save_image
 import argparse
 
 from utils import get_path, count_images
+from delete_augmented_images import delete_augmented_images
 
 
 #TODO the Augmentation folder call the delete folder before doing anything just in case
@@ -81,9 +82,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main():
 	args = build_parser().parse_args()
-	subfolders = count_images(args.data)
+	subfolders: dict = count_images(args.data)
 
 	augment_images_until_equal(args.data, subfolders)
 
+
 if __name__ == "__main__":
+	delete_augmented_images()
 	main()
