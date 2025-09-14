@@ -2,3 +2,6 @@ torch
 torchvision
 flake8
 matplotlib
+plantcv
+pillow
+numpy
