@@ -17,27 +17,13 @@ class Options:
 			outdir: str,
 			debug: str="plot",
 			result: str="results.json",
-			writeimg: bool=False,
+			writeimg: bool=True,
 		):
 		self.image = image
 		self.outdir = outdir
 		self.debug = debug
 		self.result = result
 		self.writeimg = writeimg
-
-
-
-# # Set debug parameter
-# pcv.params.debug = args.debug
-# # Set (optional) parameters 
-# pcv.params.sample_label = args.sample_label
-# pcv.params.line_thickness = 15
-
-
-# img, filename, path = pcv.readimage(filename=args.image1)
-
-# circle_roi = pcv.roi.circle(img=img, x=280, y=160, r=70)
-
 
 
 class Transformation:
@@ -50,26 +36,50 @@ class Transformation:
 	def __repr__(self):
 		pass
 
-	def all_transformations(self, base_img):
-		return base_img
+	def all_transformations(self, img_path: str, options: Options):
+		return None
 
-	def roi(self, base_img):
-		return base_img
+	def roi(self, img_path: str, options: Options):
+		pcv.params.debug = options.debug
 
-	def histogram(self, base_img):
-		return base_img
+		img, filename, path = pcv.readimage(filename=options.image1)
+		return None
 
-	def landmarks(self, base_img):
-		return base_img
+	def histogram(self, img_path: str, options: Options):
+		return None
 
-	def mask(self, base_img):
-		return base_img
+	def landmarks(self, img_path: str, options: Options):
+		return None
 
-	def gaussianblur(self, base_img):
-		return base_img
+	def mask(self, img_path: str, options: Options):
+		pcv.params.debug = options.debug
 
-	def analyze(self, base_img):
-		return base_img
+		img, _, _ = pcv.readimage(img_path)
+		gray = pcv.rgb2gray_hsv(img=img, channel='s')
+		bin_mask = pcv.threshold.binary(gray_img=gray, threshold=36, object_type='light')
+
+		bin_mask = pcv.fill_holes(bin_img=bin_mask)
+		bin_mask = pcv.erode(gray_img=bin_mask, ksize=3, i=1)
+		bin_mask = pcv.dilate(gray_img=bin_mask, ksize=3, i=2)
+		bin_mask = pcv.keep_largest(mask=bin_mask)
+
+		masked_img = pcv.apply_mask(img=img, mask=bin_mask, mask_color='white')
+		id_objects, obj_hierarchy = pcv.find_objects(img=img, mask=bin_mask)
+
+		return {
+        "img": img,
+        "mask": bin_mask,
+        "masked_img": masked_img,
+        "id_objects": id_objects,
+        "obj_hierarchy": obj_hierarchy,
+    }
+
+	def gaussianblur(self, img_path: str, options: Options):
+		return None
+
+	def analyze(self, img_path: str, options: Options):
+		return None
+	
 
 
 def _show_img(img):
@@ -102,9 +112,6 @@ def transform_single_file(path, transform):
 		sys.exit(1)
 
 	_show_img(img)
-
-
-	
 
 
 def transform_for_directory(path, transform):
