@@ -46,32 +46,75 @@ class Transformation:
 	def landmarks(self, img_path: str, options: Options):
 		return None
 
-	def mask(self, img_path: str, options: Options) -> dict:
-		pcv.params.debug = options.debug
+	def _clean(self, mask):
+		mask = pcv.fill_holes(bin_img=mask)
+		mask = pcv.erode(gray_img=mask, ksize=3, i=1)
+		mask = pcv.dilate(gray_img=mask, ksize=3, i=2)
+		return mask
 
-		img, _, _ = pcv.readimage(img_path)
-		gray = pcv.rgb2gray_hsv(rgb_img=img, channel='s')
-
-		bin_mask = pcv.threshold.binary(gray_img=gray, threshold=36, object_type='light')
-		bin_mask = pcv.fill_holes(bin_img=bin_mask)
-		bin_mask = pcv.erode(gray_img=bin_mask, ksize=3, i=1)
-		bin_mask = pcv.dilate(gray_img=bin_mask, ksize=3, i=2)
-
+	def _largest(self, mask, img):
 		h, w = img.shape[:2]
-		roi = pcv.roi.rectangle(img=img, x=0, y=0, h=h, w=w)
-		labeled_mask = pcv.roi.filter(mask=bin_mask, roi=roi, roi_type="largest")
+		roi = pcv.roi.rectangle(img=img, x=0, y=0, w=w, h=h)
+		return pcv.roi.filter(mask=mask, roi=roi, roi_type="largest")
 
-		bin_for_vis = (labeled_mask > 0).astype(np.uint8) * 255
-		masked_img = pcv.apply_mask(img=img, mask=bin_for_vis, mask_color='white')
+	def _coverage(self, mask_uint8):
+		return float(np.count_nonzero(mask_uint8)) / mask_uint8.size
+
+	def mask(self, img_path: str, options: Options, fixed_thresh: int = 36) -> dict:
+		pcv.params.debug = options.debug   # garde None en run normal
+		img, _, _ = pcv.readimage(img_path)
+
+		# Prétraitement
+		blur = pcv.gaussian_blur(img=img, ksize=(5, 5))
+		s = pcv.rgb2gray_hsv(rgb_img=blur, channel='s')   # saturation
+		v = pcv.rgb2gray_hsv(rgb_img=blur, channel='v')   # luminosité
+		a = pcv.rgb2gray_lab(rgb_img=blur, channel='a')
+		b = pcv.rgb2gray_lab(rgb_img=blur, channel='b')
+
+		# 1) Construire des candidats
+		candidates = []
+		# a) Seuil fixe (ton ancien comportement)
+		m = pcv.threshold.binary(gray_img=s, threshold=fixed_thresh, object_type='light')
+		candidates.append(("s_fixed", m))
+		# b) Percentile (adapté par image, mais simple)
+		t = float(np.percentile(s, 60))
+		m = pcv.threshold.binary(gray_img=s, threshold=t, object_type='light')
+		candidates.append(("s_p60", m))
+		# c) Otsu sur V (feuille souvent plus sombre => 'dark')
+		m = pcv.threshold.otsu(gray_img=v, object_type='dark')
+		candidates.append(("v_otsu_dark", m))
+		# d) Conjonction couleur: a=dark (vert), b=light (jaune)
+		ma = pcv.threshold.otsu(gray_img=a, object_type='dark')
+		mb = pcv.threshold.otsu(gray_img=b, object_type='light')
+		m = pcv.logical_and(ma, mb)
+		candidates.append(("a_dark_and_b_light", m))
+
+		# 2) Nettoyer + garder le plus grand objet + scorer
+		scored = []
+		for tag, m in candidates:
+			m = self._clean(m)
+			labeled = self._largest(m, img)
+			m_bin = (labeled > 0).astype(np.uint8) * 255
+			cov = self._coverage(m_bin)
+			# Cible simple : couverture entre 2% et 70%, et on préfère ~20–35%
+			plausible = 0.02 <= cov <= 0.70
+			score = (1.0 if plausible else 0.0) - abs(cov - 0.28)  # 0.28 = cible douce
+			scored.append((score, tag, m_bin))
+
+		# 3) Choisir le meilleur
+		scored.sort(reverse=True, key=lambda x: x[0])
+		best_score, best_tag, best_mask = scored[0]
+
+		masked_img = pcv.apply_mask(img=img, mask=best_mask, mask_color='white')
 
 		return {
-			"tag": "mask",
-			"display": masked_img,  # ce qu’on montre/sauve par défaut
+			"tag": f"mask_{best_tag}",
+			"display": masked_img,                # ce que tu affiches/sauves
 			"artifacts": {
-				"mask_bin": bin_mask,
-				"mask_labeled": (labeled_mask > 0).astype(np.uint8) * 255
+				"mask_bin": best_mask             # ton masque final (0/255)
 			}
 		}
+
 
 	def gaussianblur(self, img_path: str, options: Options):
 		return None
@@ -81,24 +124,24 @@ class Transformation:
 
 
 def show_array(arr: np.ndarray) -> None:
-    if not isinstance(arr, np.ndarray):
-        raise TypeError(f"show_array attend un np.ndarray, pas {type(arr)}")
-    plt.imshow(arr)
-    plt.axis("off")
-    plt.show()
+	if not isinstance(arr, np.ndarray):
+		raise TypeError(f"show_array attend un np.ndarray, pas {type(arr)}")
+	plt.imshow(arr)
+	plt.axis("off")
+	plt.show()
 
 def save_result(res: dict, outdir: str, basename: str, save_artifacts: bool=False) -> None:
-    os.makedirs(outdir, exist_ok=True)
-    # image principale
-    out_main = os.path.join(outdir, f"{basename}__{res['tag']}.png")
-    pcv.print_image(img=res["display"], filename=out_main)
-    print(f"saved: {out_main}")
-    # artefacts optionnels
-    if save_artifacts and res.get("artifacts"):
-        for k, arr in res["artifacts"].items():
-            out_k = os.path.join(outdir, f"{basename}__{res['tag']}--{k}.png")
-            pcv.print_image(img=arr, filename=out_k)
-            print(f"saved: {out_k}")
+	os.makedirs(outdir, exist_ok=True)
+	# image principale
+	out_main = os.path.join(outdir, f"{basename}__{res['tag']}.png")
+	pcv.print_image(img=res["display"], filename=out_main)
+	print(f"saved: {out_main}")
+	# artefacts optionnels
+	if save_artifacts and res.get("artifacts"):
+		for k, arr in res["artifacts"].items():
+			out_k = os.path.join(outdir, f"{basename}__{res['tag']}--{k}.png")
+			pcv.print_image(img=arr, filename=out_k)
+			print(f"saved: {out_k}")
 
 
 def transform_single_file(path: str, options: Options, transform: str):
@@ -132,8 +175,16 @@ def transform_single_file(path: str, options: Options, transform: str):
 		save_result(res, outdir=options.outdir, basename=p.stem, save_artifacts=False)
 
 
-def transform_for_directory(path, transform):
+def transform_for_directory(path: str, options: Options, transform: str):
 	transformation = Transformation()
+	os.makedirs(options.outdir, exist_ok=True)
+
+	if transform == "all":
+		print("Error. You can't apply all transformations for an entire directory.")
+		return
+	
+	for img_path in iter_images(dirpath):
+		print("hello")
 	# for loop
 	# save
 
