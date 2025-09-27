@@ -4,7 +4,7 @@ import sys
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
-
+from pathlib import Path
 
 from plantcv import plantcv as pcv
 from plantcv.parallel import WorkflowInputs
@@ -13,17 +13,15 @@ from plantcv.parallel import WorkflowInputs
 class Options:
 	def __init__(
 			self,
-			image: str,
 			outdir: str,
 			debug: str="plot",
-			result: str="results.json",
 			writeimg: bool=True,
+			result: str | None=None,
 		):
-		self.image = image
 		self.outdir = outdir
 		self.debug = debug
-		self.result = result
 		self.writeimg = writeimg
+		self.result = result
 
 
 class Transformation:
@@ -40,9 +38,6 @@ class Transformation:
 		return None
 
 	def roi(self, img_path: str, options: Options):
-		pcv.params.debug = options.debug
-
-		img, filename, path = pcv.readimage(filename=options.image1)
 		return None
 
 	def histogram(self, img_path: str, options: Options):
@@ -51,67 +46,90 @@ class Transformation:
 	def landmarks(self, img_path: str, options: Options):
 		return None
 
-	def mask(self, img_path: str, options: Options):
+	def mask(self, img_path: str, options: Options) -> dict:
 		pcv.params.debug = options.debug
 
 		img, _, _ = pcv.readimage(img_path)
-		gray = pcv.rgb2gray_hsv(img=img, channel='s')
-		bin_mask = pcv.threshold.binary(gray_img=gray, threshold=36, object_type='light')
+		gray = pcv.rgb2gray_hsv(rgb_img=img, channel='s')
 
+		bin_mask = pcv.threshold.binary(gray_img=gray, threshold=36, object_type='light')
 		bin_mask = pcv.fill_holes(bin_img=bin_mask)
 		bin_mask = pcv.erode(gray_img=bin_mask, ksize=3, i=1)
 		bin_mask = pcv.dilate(gray_img=bin_mask, ksize=3, i=2)
-		bin_mask = pcv.keep_largest(mask=bin_mask)
 
-		masked_img = pcv.apply_mask(img=img, mask=bin_mask, mask_color='white')
-		id_objects, obj_hierarchy = pcv.find_objects(img=img, mask=bin_mask)
+		h, w = img.shape[:2]
+		roi = pcv.roi.rectangle(img=img, x=0, y=0, h=h, w=w)
+		labeled_mask = pcv.roi.filter(mask=bin_mask, roi=roi, roi_type="largest")
+
+		bin_for_vis = (labeled_mask > 0).astype(np.uint8) * 255
+		masked_img = pcv.apply_mask(img=img, mask=bin_for_vis, mask_color='white')
 
 		return {
-        "img": img,
-        "mask": bin_mask,
-        "masked_img": masked_img,
-        "id_objects": id_objects,
-        "obj_hierarchy": obj_hierarchy,
-    }
+			"tag": "mask",
+			"display": masked_img,  # ce qu’on montre/sauve par défaut
+			"artifacts": {
+				"mask_bin": bin_mask,
+				"mask_labeled": (labeled_mask > 0).astype(np.uint8) * 255
+			}
+		}
 
 	def gaussianblur(self, img_path: str, options: Options):
 		return None
 
 	def analyze(self, img_path: str, options: Options):
 		return None
-	
 
 
-def _show_img(img):
-	imgnp = np.asarray(Image.open(img))
-	imgplot = plt.imshow(imgnp)
-	plt.axis("off")
-	plt.show()
+def show_array(arr: np.ndarray) -> None:
+    if not isinstance(arr, np.ndarray):
+        raise TypeError(f"show_array attend un np.ndarray, pas {type(arr)}")
+    plt.imshow(arr)
+    plt.axis("off")
+    plt.show()
+
+def save_result(res: dict, outdir: str, basename: str, save_artifacts: bool=False) -> None:
+    os.makedirs(outdir, exist_ok=True)
+    # image principale
+    out_main = os.path.join(outdir, f"{basename}__{res['tag']}.png")
+    pcv.print_image(img=res["display"], filename=out_main)
+    print(f"saved: {out_main}")
+    # artefacts optionnels
+    if save_artifacts and res.get("artifacts"):
+        for k, arr in res["artifacts"].items():
+            out_k = os.path.join(outdir, f"{basename}__{res['tag']}--{k}.png")
+            pcv.print_image(img=arr, filename=out_k)
+            print(f"saved: {out_k}")
 
 
-def transform_single_file(path, transform):
+def transform_single_file(path: str, options: Options, transform: str):
 
 	transformation = Transformation()
+	p = Path(path)
 
 	if transform == "all":
-		img = transformation.all_transformations(path)
+		res = transformation.all_transformations(path)
 	elif transform == "roi":
-		img = transformation.roi(path)
+		res = transformation.roi(path)
 	elif transform == "mask":
-		img = transformation.mask(path)
+		res = transformation.mask(path, options)
 	elif transform == "histogram":
-		img = transformation.histogram(path)
+		res = transformation.histogram(path)
 	elif transform == "gaussianblur":
-		img = transformation.gaussianblur(path)
+		res = transformation.gaussianblur(path)
 	elif transform == "analyze":
-		img = transformation.analyze(path)
+		res = transformation.analyze(path)
 	elif transform == "landmarks":
-		img = transformation.landmarks(path)
+		res = transformation.landmarks(path)
 	else:
 		print(f"Error: The following transformation doesn't exist: {transform}")
 		sys.exit(1)
 
-	_show_img(img)
+	if res is None:
+		print("Nothing to do"); return
+
+	show_array(res["display"])
+	if options.writeimg:
+		save_result(res, outdir=options.outdir, basename=p.stem, save_artifacts=False)
 
 
 def transform_for_directory(path, transform):
@@ -124,40 +142,50 @@ def build_parser() -> argparse.ArgumentParser:
 	parser = argparse.ArgumentParser()
 
 	parser.add_argument(
-        "-d", "--dst",
-        type=str,
-        default="../transformations/",
-        help="The folder where the transformations will be stored."
-    )
+		"-d", "--dst",
+		type=str,
+		default="../transformations/",
+		help="The folder where the transformations will be stored."
+	)
 	parser.add_argument(
-        "-s", "--src",
-        type=str,
-        default="../Apple/Apple_healthy/image (5).JPG",
-        help="The image or folder that you want to transform."
-    )
+		"-s", "--src",
+		type=str,
+		default="../Apple/Apple_healthy/image (5).JPG",
+		help="The image or folder that you want to transform."
+	)
 	parser.add_argument(
-        "-t", "--transformation",
-        type=str,
-        default="all",
-        help="The transformation that you want (default=all)"
-    )
+		"-t", "--transformation",
+		type=str,
+		default="all",
+		help="The transformation that you want (default=all)"
+	)
 
 	return parser
 
 
 def main():
 	args = build_parser().parse_args()
+	src = args.src
 
-	path = args.src
-	if not os.path.exists(path):
-		print(f"Error: The following path doesn't exist: {path}")
+	if not os.path.exists(src):
+		print(f"Error: The following path doesn't exist: {src}")
 		sys.exit(1)
-	elif os.path.isdir(path):
+
+	is_dir = os.path.isdir(src)
+
+	options = Options(
+		outdir=args.dst,
+		debug=None,
+		writeimg=is_dir,
+		result=None,
+	)
+
+	if is_dir:
 		print("that's a directory")
-		transform_for_directory(path, transform=args.transformation)
-	elif os.path.isfile(path):
+		transform_for_directory(src, transform=args.transformation)
+	elif os.path.isfile(src):
 		print("that's a file")
-		transform_single_file(path, transform=args.transformation)
+		transform_single_file(src, options, transform=args.transformation)
 
 
 if __name__ == "__main__":
