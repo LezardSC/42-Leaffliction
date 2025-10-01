@@ -9,6 +9,8 @@ from pathlib import Path
 from plantcv import plantcv as pcv
 from plantcv.parallel import WorkflowInputs
 
+from utils import iter_images
+
 
 class Options:
 	def __init__(
@@ -171,22 +173,31 @@ def transform_single_file(path: str, options: Options, transform: str):
 		print("Nothing to do"); return
 
 	show_array(res["display"])
-	if options.writeimg:
-		save_result(res, outdir=options.outdir, basename=p.stem, save_artifacts=False)
 
 
-def transform_for_directory(path: str, options: Options, transform: str):
-	transformation = Transformation()
+def transform_for_directory(dirpath: str, options: Options, transform: str):
+	t = Transformation()
 	os.makedirs(options.outdir, exist_ok=True)
+
 
 	if transform == "all":
 		print("Error. You can't apply all transformations for an entire directory.")
 		return
 	
+	fn = getattr(t, transform)
+	if fn is None:
+		print(f"Error: The following transformation isn't valid: {transform}")
+		return
 	for img_path in iter_images(dirpath):
-		print("hello")
-	# for loop
-	# save
+		basename = Path(img_path).stem
+		try:
+			result = fn(img_path, options)
+			save_result(result, outdir=options.outdir, basename=basename)
+		except Exception as e:
+			print(f"Error during the image transformation: {e} for '{img_path}'")
+			return 
+	
+	print(f"All images in {dirpath} have been transformed. You can find them in the folder: {options.outdir}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -233,7 +244,7 @@ def main():
 
 	if is_dir:
 		print("that's a directory")
-		transform_for_directory(src, transform=args.transformation)
+		transform_for_directory(src, options, transform=args.transformation)
 	elif os.path.isfile(src):
 		print("that's a file")
 		transform_single_file(src, options, transform=args.transformation)

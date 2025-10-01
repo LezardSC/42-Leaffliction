@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 def get_path(relative_path: str) -> str:
 	"""
@@ -27,3 +28,11 @@ def count_images(dataset: str) -> dict:
 			subfolders[subfolder] = count
 
 	return subfolders
+
+def iter_images(dirpath, recursive=False):
+    p = Path(dirpath)
+    IMG_EXTS = {".jpg",".jpeg",".png",".bmp",".tif",".tiff"}
+    it = p.rglob("*") if recursive else p.iterdir()
+    for image_path in it:
+        if image_path.is_file() and image_path.suffix.lower() in IMG_EXTS:
+            yield image_path
