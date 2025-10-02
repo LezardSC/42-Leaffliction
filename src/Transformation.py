@@ -148,26 +148,14 @@ def save_result(res: dict, outdir: str, basename: str, save_artifacts: bool=Fals
 
 def transform_single_file(path: str, options: Options, transform: str):
 
-	transformation = Transformation()
+	t = Transformation()
 	p = Path(path)
 
-	if transform == "all":
-		res = transformation.all_transformations(path)
-	elif transform == "roi":
-		res = transformation.roi(path)
-	elif transform == "mask":
-		res = transformation.mask(path, options)
-	elif transform == "histogram":
-		res = transformation.histogram(path)
-	elif transform == "gaussianblur":
-		res = transformation.gaussianblur(path)
-	elif transform == "analyze":
-		res = transformation.analyze(path)
-	elif transform == "landmarks":
-		res = transformation.landmarks(path)
-	else:
+	fn = getattr(t, transform)
+	if fn is None:
 		print(f"Error: The following transformation doesn't exist: {transform}")
-		sys.exit(1)
+		return
+	res = fn(path, options)
 
 	if res is None:
 		print("Nothing to do"); return
@@ -178,7 +166,6 @@ def transform_single_file(path: str, options: Options, transform: str):
 def transform_for_directory(dirpath: str, options: Options, transform: str):
 	t = Transformation()
 	os.makedirs(options.outdir, exist_ok=True)
-
 
 	if transform == "all":
 		print("Error. You can't apply all transformations for an entire directory.")
@@ -191,8 +178,8 @@ def transform_for_directory(dirpath: str, options: Options, transform: str):
 	for img_path in iter_images(dirpath):
 		basename = Path(img_path).stem
 		try:
-			result = fn(img_path, options)
-			save_result(result, outdir=options.outdir, basename=basename)
+			res = fn(img_path, options)
+			save_result(res, outdir=options.outdir, basename=basename)
 		except Exception as e:
 			print(f"Error during the image transformation: {e} for '{img_path}'")
 			return 
