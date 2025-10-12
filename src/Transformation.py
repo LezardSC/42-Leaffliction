@@ -48,73 +48,66 @@ class Transformation:
 	def landmarks(self, img_path: str, options: Options):
 		return None
 
-	def _clean(self, mask):
-		mask = pcv.fill_holes(bin_img=mask)
-		mask = pcv.erode(gray_img=mask, ksize=3, i=1)
-		mask = pcv.dilate(gray_img=mask, ksize=3, i=2)
-		return mask
+	def mask(self, img_path: str, options: Options,
+			saturation: int = 50,      # in %, the lower it is, the more pixels we keep.
+			green_h_low: int = 35, green_h_high: int = 95,  # min and max hue. Varies between 0 and 179 on OpenCV. Green is around 60
+			delta_a: float = 3,        # margin LAB.a, oppose the green of the leaf with the background. Weak value is green, strong is magenta
+			delta_g: int = 8,            # margin RGB where  G > R and G > B
+			expand_px: int = 4           # expand the mask a little
+			) -> dict:
 
-	def _largest(self, mask, img):
-		h, w = img.shape[:2]
-		roi = pcv.roi.rectangle(img=img, x=0, y=0, w=w, h=h)
-		return pcv.roi.filter(mask=mask, roi=roi, roi_type="largest")
-
-	def _coverage(self, mask_uint8):
-		return float(np.count_nonzero(mask_uint8)) / mask_uint8.size
-
-	def mask(self, img_path: str, options: Options, fixed_thresh: int = 36) -> dict:
-		pcv.params.debug = options.debug   # garde None en run normal
+		pcv.params.debug = options.debug
 		img, _, _ = pcv.readimage(img_path)
 
-		# Prétraitement
-		blur = pcv.gaussian_blur(img=img, ksize=(5, 5))
-		s = pcv.rgb2gray_hsv(rgb_img=blur, channel='s')   # saturation
-		v = pcv.rgb2gray_hsv(rgb_img=blur, channel='v')   # luminosité
-		a = pcv.rgb2gray_lab(rgb_img=blur, channel='a')
-		b = pcv.rgb2gray_lab(rgb_img=blur, channel='b')
+		blur = pcv.gaussian_blur(img=img, ksize=(5, 5)) # reduces local noise
 
-		# 1) Construire des candidats
-		candidates = []
-		# a) Seuil fixe (ton ancien comportement)
-		m = pcv.threshold.binary(gray_img=s, threshold=fixed_thresh, object_type='light')
-		candidates.append(("s_fixed", m))
-		# b) Percentile (adapté par image, mais simple)
-		t = float(np.percentile(s, 60))
-		m = pcv.threshold.binary(gray_img=s, threshold=t, object_type='light')
-		candidates.append(("s_p60", m))
-		# c) Otsu sur V (feuille souvent plus sombre => 'dark')
-		m = pcv.threshold.otsu(gray_img=v, object_type='dark')
-		candidates.append(("v_otsu_dark", m))
-		# d) Conjonction couleur: a=dark (vert), b=light (jaune)
-		ma = pcv.threshold.otsu(gray_img=a, object_type='dark')
-		mb = pcv.threshold.otsu(gray_img=b, object_type='light')
-		m = pcv.logical_and(ma, mb)
-		candidates.append(("a_dark_and_b_light", m))
+		H = pcv.rgb2gray_hsv(rgb_img=blur, channel='h')   # Hue
+		S = pcv.rgb2gray_hsv(rgb_img=blur, channel='s')   # Saturation (grey <-> bright)
+		V = pcv.rgb2gray_hsv(rgb_img=blur, channel='v')   # Brightness (black <-> white)
 
-		# 2) Nettoyer + garder le plus grand objet + scorer
-		scored = []
-		for tag, m in candidates:
-			m = self._clean(m)
-			labeled = self._largest(m, img)
-			m_bin = (labeled > 0).astype(np.uint8) * 255
-			cov = self._coverage(m_bin)
-			# Cible simple : couverture entre 2% et 70%, et on préfère ~20–35%
-			plausible = 0.02 <= cov <= 0.70
-			score = (1.0 if plausible else 0.0) - abs(cov - 0.28)  # 0.28 = cible douce
-			scored.append((score, tag, m_bin))
+		A = pcv.rgb2gray_lab(rgb_img=blur, channel='a')   # LAB.a (green <-> magenta)
 
-		# 3) Choisir le meilleur
-		scored.sort(reverse=True, key=lambda x: x[0])
-		best_score, best_tag, best_mask = scored[0]
+		R = blur[:, :, 0].astype(np.int16) # int16 to avoid overflow
+		G = blur[:, :, 1].astype(np.int16)
+		B = blur[:, :, 2].astype(np.int16)
 
-		masked_img = pcv.apply_mask(img=img, mask=best_mask, mask_color='white')
+		# Mask by saturation
+		tS = float(np.percentile(S, saturation))
+		mS = pcv.threshold.binary(gray_img=S, threshold=tS, object_type='light')
+
+		# Estimation of the background
+		bg_mask = S <= np.percentile(S, 25)      # low saturation pixels is probably background
+		A_bg = np.median(A[bg_mask]) if np.any(bg_mask) else float(np.median(A))
+
+		# Testing pixels
+		green_by_a = (A.astype(np.float32) <= A_bg - delta_a)            # greener than background
+		green_by_h = (H >= green_h_low) & (H <= green_h_high)            # hue in the specter
+		green_by_g = (G >= R + delta_g) & (G >= B + delta_g)             # G > R,B with margin
+		mGreen = (green_by_a | green_by_h | green_by_g).astype(np.uint8) * 255
+
+		# Combine saturation mask and green mask
+		m = pcv.logical_and(mS, mGreen)
+
+		# Cleaning
+		m = pcv.fill_holes(bin_img=m)
+		m = pcv.erode(gray_img=m, ksize=3, i=1)
+		m = pcv.dilate(gray_img=m, ksize=3, i=2)
+		h, w = img.shape[:2]
+		roi = pcv.roi.rectangle(img=img, x=0, y=0, w=w, h=h)
+		labeled = pcv.roi.filter(mask=m, roi=roi, roi_type="largest")
+		bin_mask = (labeled > 0).astype(np.uint8) * 255
+
+		# Slightly expand the mask
+		if expand_px > 0:
+			iters = int(np.ceil(expand_px / 2))
+			bin_mask = pcv.dilate(gray_img=bin_mask, ksize=3, i=iters)
+
+		masked_img = pcv.apply_mask(img=img, mask=bin_mask, mask_color='white')
 
 		return {
-			"tag": f"mask_{best_tag}",
-			"display": masked_img,                # ce que tu affiches/sauves
-			"artifacts": {
-				"mask_bin": best_mask             # ton masque final (0/255)
-			}
+			"tag": "mask",
+			"display": masked_img,
+			"artifacts": {"mask_bin": bin_mask}
 		}
 
 
