@@ -49,10 +49,10 @@ class Transformation:
 		return None
 
 	def mask(self, img_path: str, options: Options,
-			saturation: int = 50,      # in %, the lower it is, the more pixels we keep.
+			saturation: int = 1,      # in %, the lower it is, the more pixels we keep.
 			green_h_low: int = 35, green_h_high: int = 95,  # min and max hue. Varies between 0 and 179 on OpenCV. Green is around 60
-			delta_a: float = 3,        # margin LAB.a, oppose the green of the leaf with the background. Weak value is green, strong is magenta
-			delta_g: int = 8,            # margin RGB where  G > R and G > B
+			delta_a: float = 8,        # margin LAB.a, oppose the green of the leaf with the background. Weak value is green, strong is magenta
+			delta_g: int = 4,            # margin RGB where  G > R and G > B
 			expand_px: int = 4           # expand the mask a little
 			) -> dict:
 
@@ -76,7 +76,7 @@ class Transformation:
 		mS = pcv.threshold.binary(gray_img=S, threshold=tS, object_type='light')
 
 		# Estimation of the background
-		bg_mask = S <= np.percentile(S, 25)      # low saturation pixels is probably background
+		bg_mask = S <= np.percentile(S, 10)      # low saturation pixels is probably background
 		A_bg = np.median(A[bg_mask]) if np.any(bg_mask) else float(np.median(A))
 
 		# Testing pixels
@@ -89,9 +89,9 @@ class Transformation:
 		m = pcv.logical_and(mS, mGreen)
 
 		# Cleaning
+		m = pcv.dilate(gray_img=m, ksize=5, i=1)
+		m = pcv.erode(gray_img=m, ksize=5, i=1)
 		m = pcv.fill_holes(bin_img=m)
-		m = pcv.erode(gray_img=m, ksize=3, i=1)
-		m = pcv.dilate(gray_img=m, ksize=3, i=2)
 		h, w = img.shape[:2]
 		roi = pcv.roi.rectangle(img=img, x=0, y=0, w=w, h=h)
 		labeled = pcv.roi.filter(mask=m, roi=roi, roi_type="largest")
