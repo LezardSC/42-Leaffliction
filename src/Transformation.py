@@ -40,6 +40,7 @@ class Transformation:
 		return None
 
 	def roi(self, img_path: str, options: Options):
+		# From mask with highest x and highest y points ?
 		return None
 
 	def histogram(self, img_path: str, options: Options):
@@ -112,7 +113,16 @@ class Transformation:
 
 
 	def gaussianblur(self, img_path: str, options: Options):
-		return None
+		pcv.params.debug = options.debug
+		img, _, _ = pcv.readimage(img_path)
+		# Need to apply mask ?
+		B = pcv.rgb2gray_hsv(rgb_img=img, channel='v')   # Brightness
+		thresholded_img = pcv.threshold.otsu(gray_img=B, object_type='dark')
+		blur = pcv.gaussian_blur(img=thresholded_img, ksize=(5, 5))
+		return {
+			"tag": "gaussianblur",
+			"display": blur,
+		}
 
 	def analyze(self, img_path: str, options: Options):
 		return None
