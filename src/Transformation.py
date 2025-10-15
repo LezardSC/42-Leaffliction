@@ -44,9 +44,11 @@ class Transformation:
 		return None
 
 	def histogram(self, img_path: str, options: Options):
+		# visualize.histogram ?
 		return None
 
 	def landmarks(self, img_path: str, options: Options):
+		# homology.acute ?
 		return None
 
 	def mask(self, img_path: str, options: Options,
@@ -125,6 +127,20 @@ class Transformation:
 		}
 
 	def analyze(self, img_path: str, options: Options):
+		# analyze.size
+
+		pcv.params.debug = options.debug
+		img, _, _ = pcv.readimage(img_path)
+
+		pcv.params.debug = "plot"
+		# Optionally, set a sample label name
+		pcv.params.sample_label = "plant"
+
+		# Characterize object shapes
+		shape_image = pcv.analyze.size(img=img, labeled_mask=mask, n_labels=1)
+
+		# Save returned images with more specific naming
+		pcv.print_image(shape_image, '/home/malia/setaria_shape_img.png')
 		return None
 
 
