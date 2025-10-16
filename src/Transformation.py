@@ -56,7 +56,7 @@ class Transformation:
 			green_h_low: int = 35, green_h_high: int = 95,  # min and max hue. Varies between 0 and 179 on OpenCV. Green is around 60
 			delta_a: float = 8,        # margin LAB.a, oppose the green of the leaf with the background. Weak value is green, strong is magenta
 			delta_g: int = 4,            # margin RGB where  G > R and G > B
-			expand_px: int = 4           # expand the mask a little
+			expand_px: int = 2           # expand the mask a little
 			) -> dict:
 
 		pcv.params.debug = options.debug
@@ -127,12 +127,11 @@ class Transformation:
 		}
 
 	def analyze(self, img_path: str, options: Options):
-		# analyze.size
-
 		pcv.params.debug = options.debug
 		img, _, _ = pcv.readimage(img_path)
 
-		pcv.params.debug = "plot"
+		mask = self.mask(img_path, options)["artifacts"]["mask_bin"]
+
 		# Optionally, set a sample label name
 		pcv.params.sample_label = "plant"
 
@@ -141,7 +140,10 @@ class Transformation:
 
 		# Save returned images with more specific naming
 		pcv.print_image(shape_image, '/home/malia/setaria_shape_img.png')
-		return None
+		return {
+			"tag": "mask",
+			"display": shape_image,
+		}
 
 
 def show_array(arr: np.ndarray) -> None:
