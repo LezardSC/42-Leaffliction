@@ -48,8 +48,17 @@ class Transformation:
 		return None
 
 	def landmarks(self, img_path: str, options: Options):
-		# homology.acute ?
-		return None
+		pcv.params.debug = options.debug
+		img, _, _ = pcv.readimage(img_path)
+
+		mask = self.mask(img_path, options)["artifacts"]["mask_bin"]
+		homolog_pts, start_pts, stop_pts, ptvals, chain, max_dist = pcv.homology.acute(img=img, mask=mask, win=25, threshold=90)
+
+		
+		return {
+			"tag": "landmarks",
+			"display": None # find a way to pass the image
+		}
 
 	def mask(self, img_path: str, options: Options,
 			saturation: int = 1,      # in %, the lower it is, the more pixels we keep.
