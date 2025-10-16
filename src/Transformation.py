@@ -44,8 +44,16 @@ class Transformation:
 		return None
 
 	def histogram(self, img_path: str, options: Options):
-		# visualize.histogram ?
-		return None
+		pcv.params.debug = options.debug
+		img, _, _ = pcv.readimage(img_path)
+
+		mask = self.mask(img_path, options)["artifacts"]["mask_bin"]
+		hist_figure, hist_data = pcv.visualize.histogram(img=img, mask=mask, hist_data=True)
+
+		return {
+			"tag": "landmarks",
+			"display": hist_figure
+		}
 
 	def landmarks(self, img_path: str, options: Options):
 		pcv.params.debug = options.debug
