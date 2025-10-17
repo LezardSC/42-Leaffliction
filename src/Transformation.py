@@ -61,7 +61,7 @@ class Transformation:
 
 		mask = self.mask(img_path, options)["artifacts"]["mask_bin"]
 		homolog_pts, start_pts, stop_pts, ptvals, chain, max_dist = pcv.homology.acute(img=img, mask=mask, win=25, threshold=90)
-
+		
 		
 		return {
 			"tag": "landmarks",
@@ -134,9 +134,11 @@ class Transformation:
 	def gaussianblur(self, img_path: str, options: Options):
 		pcv.params.debug = options.debug
 		img, _, _ = pcv.readimage(img_path)
-		# Need to apply mask ?
+		mask = self.mask(img_path, options)["artifacts"]["mask_bin"]
+
 		B = pcv.rgb2gray_hsv(rgb_img=img, channel='v')   # Brightness
-		thresholded_img = pcv.threshold.otsu(gray_img=B, object_type='dark')
+		B_reduced = pcv.logical_and(B, mask)
+		thresholded_img = pcv.threshold.otsu(gray_img=B_reduced, object_type='dark')
 		blur = pcv.gaussian_blur(img=thresholded_img, ksize=(5, 5))
 		return {
 			"tag": "gaussianblur",
