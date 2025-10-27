@@ -38,10 +38,43 @@ class Transformation:
 
 	def all_transformations(self, img_path: str, options: Options):
 		return None
+	
+	def _draw_point(self, img, x: int, y: int, size: int):
+		for y_img in range(len(img)):
+			for x_img in range(len(img[y_img])):
+				if (x - x_img) * (x - x_img) + (y - y_img) * (y - y_img) <= size * size:
+					img[y_img][x_img] = [255, 0, 0]
+	
+	def _draw_rectangle(self, img, x: int, y: int, length: int, height: int):
+		for y_img in range(len(img)):
+			for x_img in range(len(img[y_img])):
+				if (y_img == y or y_img == y + height) and x_img > x and x_img < x + length:
+					img[y_img][x_img] = [0, 0, 255]
+				if (x_img == x or x_img == x + length) and y_img > y and y_img < y + height:
+					img[y_img][x_img] = [0, 0, 255]
+	
+	def _find_roi(self, mask):
+		maskindex = np.where(mask == 255)
+		y = min(maskindex[0])
+		height = max(maskindex[0]) - y
+		x = min(maskindex[1])
+		length = max(maskindex[1]) - x
 
+		return x, y, length, height
+
+	
 	def roi(self, img_path: str, options: Options):
-		# From mask with highest x and highest y points ?
-		return None
+		pcv.params.debug = options.debug	
+		img, _, _ = pcv.readimage(img_path)
+
+		mask = self.mask(img_path, options)["artifacts"]["mask_bin"]
+		x, y, length, height = self._find_roi(mask)
+		self._draw_rectangle(img, x, y, length, height)
+
+		return {
+			"tag": "landmarks",
+			"display": img,
+		}
 
 	def histogram(self, img_path: str, options: Options):
 		pcv.params.debug = options.debug
@@ -55,17 +88,21 @@ class Transformation:
 			"display": hist_figure
 		}
 
+
+	# to display pseudolandmarks on image, need to have options='plot'
 	def landmarks(self, img_path: str, options: Options):
 		pcv.params.debug = options.debug
 		img, _, _ = pcv.readimage(img_path)
 
 		mask = self.mask(img_path, options)["artifacts"]["mask_bin"]
-		homolog_pts, start_pts, stop_pts, ptvals, chain, max_dist = pcv.homology.acute(img=img, mask=mask, win=25, threshold=90)
-		
-		
+
+		homolog_pts, start_pts, stop_pts, ptvals, chain, max_dist = pcv.homology.acute(img=img, mask=mask, win=10, threshold=160)
+		for pt in homolog_pts:
+			self._draw_point(img, pt[0][0], pt[0][1], 5)
+
 		return {
 			"tag": "landmarks",
-			"display": None # find a way to pass the image
+			"display": img
 		}
 
 	def mask(self, img_path: str, options: Options,
@@ -187,7 +224,6 @@ def save_result(res: dict, outdir: str, basename: str, save_artifacts: bool=Fals
 
 
 def transform_single_file(path: str, options: Options, transform: str):
-
 	t = Transformation()
 	p = Path(path)
 
@@ -239,7 +275,7 @@ def build_parser() -> argparse.ArgumentParser:
 	parser.add_argument(
 		"-s", "--src",
 		type=str,
-		default="../Apple/Apple_healthy/image (5).JPG",
+		default="../Apple/Apple_healthy/image (3).JPG",
 		help="The image or folder that you want to transform."
 	)
 	parser.add_argument(
