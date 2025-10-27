@@ -36,9 +36,6 @@ class Transformation:
 	def __repr__(self):
 		pass
 
-	def all_transformations(self, img_path: str, options: Options):
-		return None
-	
 	def _draw_point(self, img, x: int, y: int, size: int):
 		for y_img in range(len(img)):
 			for x_img in range(len(img[y_img])):
@@ -242,10 +239,6 @@ def transform_single_file(path: str, options: Options, transform: str):
 def transform_for_directory(dirpath: str, options: Options, transform: str):
 	t = Transformation()
 	os.makedirs(options.outdir, exist_ok=True)
-
-	if transform == "all":
-		print("Error. You can't apply all transformations for an entire directory.")
-		return
 	
 	fn = getattr(t, transform)
 	if fn is None:
@@ -281,8 +274,8 @@ def build_parser() -> argparse.ArgumentParser:
 	parser.add_argument(
 		"-t", "--transformation",
 		type=str,
-		default="all",
-		help="The transformation that you want (default=all)"
+		default="mask",
+		help="The transformation that you want (default=mask)"
 	)
 
 	return parser
@@ -315,11 +308,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-
-"""
-	1.	recognize if image path or directory --src
-	2.	if image: show 6 transformations
-	3.	if directory: save in directory
-		--directory to save in a particular directory
-	4. --transformation to choose a single transformation else all
-"""
