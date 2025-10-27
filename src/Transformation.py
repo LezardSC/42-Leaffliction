@@ -72,7 +72,7 @@ class Transformation:
 		self._draw_rectangle(img, x, y, length, height)
 
 		return {
-			"tag": "landmarks",
+			"tag": "roi",
 			"display": img,
 		}
 
@@ -84,7 +84,7 @@ class Transformation:
 		hist_figure, hist_data = pcv.visualize.histogram(img=img, mask=mask, hist_data=True)
 
 		return {
-			"tag": "landmarks",
+			"tag": "histogram",
 			"display": hist_figure
 		}
 
@@ -197,7 +197,7 @@ class Transformation:
 		# Save returned images with more specific naming
 		pcv.print_image(shape_image, '/home/malia/setaria_shape_img.png')
 		return {
-			"tag": "mask",
+			"tag": "analyze",
 			"display": shape_image,
 		}
 
