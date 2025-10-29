@@ -190,7 +190,7 @@ if __name__ == "__main__":
     
     # Let's load the model we just created and test the accuracy per label
     model = Network()
-    path = "myFirstModel.pth"
+    path = "models/myFirstModel.pth"
     model.load_state_dict(torch.load(path))
 
     # Test with batch of images
