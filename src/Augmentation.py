@@ -82,11 +82,12 @@ def build_parser() -> argparse.ArgumentParser:
 	return parser
 
 
-def augmentation():
+def augmentation(data_path=None):
 	args = build_parser().parse_args()
-	subfolders: dict = count_images(args.data)
+	data = data_path if data_path is not None else args.data
+	subfolders: dict = count_images(data)
 
-	augment_images_until_equal(args.data, subfolders)
+	augment_images_until_equal(data, subfolders)
 
 
 if __name__ == "__main__":
