@@ -2,6 +2,8 @@ from torchvision.datasets import ImageFolder
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader, random_split
 
+from tqdm.auto import tqdm
+
 # Define transformations for the training and test sets
 transformations = transforms.Compose([
     transforms.ToTensor(),
@@ -76,7 +78,7 @@ def testAccuracy():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     with torch.no_grad():
-        for data in test_loader:
+        for data in tqdm(test_loader, desc="Testing", leave=False):
             images, labels = data
             # run the model on the test set to predict labels
             outputs = model(images.to(device))
@@ -105,7 +107,9 @@ def train(num_epochs):
         running_loss = 0.0
         running_acc = 0.0
 
-        for i, (images, labels) in enumerate(train_loader, 0):
+        for i, (images, labels) in tqdm(enumerate(train_loader, 0),
+                                        total=len(train_loader),
+                                        desc=f"Epoch {epoch+1}/{num_epochs}"):
             
             # get the inputs
             images = Variable(images.to(device))

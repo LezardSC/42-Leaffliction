@@ -251,7 +251,7 @@ def transform_for_directory(dirpath: str, options: Options, transform: str):
 	if fn is None:
 		print(f"Error: The following transformation isn't valid: {transform}")
 		return
-	for img_path in iter_images(dirpath, True):
+	for img_path in iter_images(dirpath, False):
 		basename = Path(img_path).stem
 		try:
 			res = fn(img_path, options)
@@ -307,20 +307,10 @@ def main():
 	)
 
 	if is_dir:
-		print("that's a directory")
 		transform_for_directory(src, options, transform=args.transformation)
 	elif os.path.isfile(src):
-		print("that's a file")
 		transform_single_file(src, options, transform=args.transformation)
 
 
 if __name__ == "__main__":
 	main()
-
-"""
-	1.	recognize if image path or directory --src
-	2.	if image: show 6 transformations
-	3.	if directory: save in directory
-		--directory to save in a particular directory
-	4. --transformation to choose a single transformation else all
-"""
