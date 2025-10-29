@@ -285,6 +285,11 @@ def build_parser() -> argparse.ArgumentParser:
 		default="mask",
 		help="The transformation that you want"
 	)
+	parser.add_argument(
+		"--subfolders-only",
+		action="store_true",
+		help="Apply the transformations to the subfolders instead of the given folder"
+	)
 
 	return parser
 
@@ -307,6 +312,13 @@ def main():
 	)
 
 	if is_dir:
+		if args.subfolders_only:
+			for root, dirs, _ in os.walk(src):
+				for d in dirs:
+					subdir_path = os.path.join(root, d)
+					print(f"Processing subfolder: {subdir_path}")
+					transform_for_directory(subdir_path, options, transform=args.transformation)
+			return
 		transform_for_directory(src, options, transform=args.transformation)
 	elif os.path.isfile(src):
 		transform_single_file(src, options, transform=args.transformation)
