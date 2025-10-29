@@ -82,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
 	return parser
 
 
-def main():
+def augmentation():
 	args = build_parser().parse_args()
 	subfolders: dict = count_images(args.data)
 
@@ -91,4 +91,4 @@ def main():
 
 if __name__ == "__main__":
 	delete_augmented_images()
-	main()
+	augmentation()
