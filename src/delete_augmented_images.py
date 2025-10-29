@@ -42,7 +42,7 @@ def parse_args():
 		description="Delete augmented images."
 	)
 	p.add_argument(
-		"-r", "--root", default="../Apple", help="Root Folder"
+		"-r", "--root", default="./Apple", help="Root Folder"
 	)
 		
 	return p.parse_args()

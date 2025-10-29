@@ -251,11 +251,12 @@ def transform_for_directory(dirpath: str, options: Options, transform: str):
 	if fn is None:
 		print(f"Error: The following transformation isn't valid: {transform}")
 		return
-	for img_path in iter_images(dirpath):
+	for img_path in iter_images(dirpath, True):
 		basename = Path(img_path).stem
 		try:
 			res = fn(img_path, options)
-			save_result(res, outdir=options.outdir, basename=basename)
+			p = Path(img_path).parts
+			save_result(res, outdir=options.outdir + p[1], basename=basename)
 		except Exception as e:
 			print(f"Error during the image transformation: {e} for '{img_path}'")
 			return 
@@ -269,20 +270,20 @@ def build_parser() -> argparse.ArgumentParser:
 	parser.add_argument(
 		"-d", "--dst",
 		type=str,
-		default="../transformations/",
+		default="./transformations/",
 		help="The folder where the transformations will be stored."
 	)
 	parser.add_argument(
 		"-s", "--src",
 		type=str,
-		default="../Apple/Apple_healthy/image (3).JPG",
+		default="./Apple",
 		help="The image or folder that you want to transform."
 	)
 	parser.add_argument(
 		"-t", "--transformation",
 		type=str,
-		default="all",
-		help="The transformation that you want (default=all)"
+		default="mask",
+		help="The transformation that you want"
 	)
 
 	return parser

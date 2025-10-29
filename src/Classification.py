@@ -2,20 +2,18 @@ from torchvision.datasets import ImageFolder
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader, random_split
 
-# Loading and normalizing the data.
 # Define transformations for the training and test sets
 transformations = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
 
-# CIFAR10 dataset consists of 50K training images. We define the batch size of 10 to load 5,000 batches of images.
 batch_size = 1
 number_of_labels = 4
 size_test_set = 100
 
 # Create a dataset for training and a dataset for testing
-dataset = ImageFolder(root="./Apple", transform=transformations)
+dataset = ImageFolder(root="./transformations", transform=transformations)
 train_set, test_set = random_split(dataset, [len(dataset) - size_test_set, size_test_set])
 
 # Create a loader for the training set which will read the data within batch size and put into memory.
@@ -127,13 +125,13 @@ def train(num_epochs):
             # Let's print statistics for every 1,000 images
             running_loss += loss.item()     # extract the loss value
             if i % 1000 == 999:    
-                # print every 1000 (twice per epoch) 
+                # print every 1000
                 print('[%d, %5d] loss: %.3f' %
                       (epoch + 1, i + 1, running_loss / 1000))
                 # zero the loss
                 running_loss = 0.0
 
-        # Compute and print the average accuracy fo this epoch when tested over all 10000 test images
+        # Compute and print the average accuracy fo this epoch when tested over all test images
         accuracy = testAccuracy()
         print('For epoch', epoch+1,'the test accuracy over the whole test set is %d %%' % (accuracy))
         
@@ -169,7 +167,7 @@ def testBatch():
     # Let's see what if the model identifiers the  labels of those example
     outputs = model(images)
     
-    # We got the probability for every 10 labels. The highest (max) probability should be correct label
+    # We got the probability for every labels. The highest (max) probability should be correct label
     _, predicted = torch.max(outputs, 1)
     
     # Let's show the predicted labels on the screen to compare with the real ones
@@ -180,7 +178,7 @@ def testBatch():
 if __name__ == "__main__":
     
     # Let's build our model
-    train(2)
+    train(5)
     print('Finished Training')
 
     # Test which classes performed well
