@@ -20,17 +20,17 @@ size_test_set = 100
 # Create a dataset for training and a dataset for testing
 dataset = ImageFolder(root="./transformations", transform=transformations)
 
-train_path = "./dataset_split/train"
-test_path = "./dataset_split/val"
+# train_path = "./dataset_split/train"
+# test_path = "./dataset_split/val"
 
-delete_augmented_images(train_path)
-print("Running data augmentation on training set...")
-augmentation(train_path)
-print("Data augmentation done.\n")
+# delete_augmented_images(train_path)
+# print("Running data augmentation on training set...")
+# augmentation(train_path)
+# print("Data augmentation done.\n")
 
-# train_set, test_set = random_split(dataset, [len(dataset) - size_test_set, size_test_set])
-train_set = ImageFolder(root=train_path, transform=transformations)
-test_set = ImageFolder(root=test_path, transform=transformations)
+train_set, test_set = random_split(dataset, [len(dataset) - size_test_set, size_test_set])
+# train_set = ImageFolder(root=train_path, transform=transformations)
+# test_set = ImageFolder(root=test_path, transform=transformations)
 
 # Create a loader for the training set which will read the data within batch size and put into memory.
 train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -56,13 +56,15 @@ class Network(nn.Module):
         super(Network, self).__init__()
         
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=5, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(10)
         self.conv2 = nn.Conv2d(in_channels=10, out_channels=15, kernel_size=5, stride=1, padding=1)
-        self.fc1 = nn.Linear(15*252*252, 4)
+        self.bn2 = nn.BatchNorm2d(15)
+        self.fc1 = nn.Linear(batch_size*15*252*252, 4)
 
     def forward(self, input):
-        output = F.relu(self.conv1(input))
-        output = F.relu(self.conv2(output))
-        output = output.view(-1, 15*252*252)
+        output = F.relu(self.bn1(self.conv1(input)))
+        output = F.relu(self.bn2(self.conv2(output)))
+        output = output.view(-1, batch_size*15*252*252)
         output = self.fc1(output)
 
         return output
@@ -74,7 +76,7 @@ from torch.optim import Adam
  
 # Define the loss function with Classification Cross-Entropy loss and an optimizer with Adam optimizer
 loss_fn = nn.CrossEntropyLoss()
-optimizer = Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
+optimizer = Adam(model.parameters(), lr=0.001)
 
 from torch.autograd import Variable
 
@@ -142,16 +144,11 @@ def train(num_epochs):
 
             # Let's print statistics for every 1,000 images
             running_loss += loss.item()     # extract the loss value
-            if i % 1000 == 999:    
-                # print every 1000
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 1000))
-                # zero the loss
-                running_loss = 0.0
 
         # Compute and print the average accuracy fo this epoch when tested over all test images
         accuracy = testAccuracy()
-        print('For epoch', epoch+1,'the test accuracy over the whole test set is %d %%' % (accuracy))
+        print('[%d] loss: %.3f' % (epoch + 1, running_loss / len(train_loader) * batch_size))
+        print('For epoch', epoch+1, 'the test accuracy over the whole test set is %d %%' % (accuracy))
         
         # we want to save the model if the accuracy is the best
         if accuracy > best_accuracy:
@@ -196,7 +193,7 @@ def testBatch():
 if __name__ == "__main__":
     
     # Let's build our model
-    train(5)
+    train(3)
     print('Finished Training')
 
     # Test which classes performed well

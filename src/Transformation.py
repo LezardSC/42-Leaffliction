@@ -251,7 +251,7 @@ def transform_for_directory(dirpath: str, options: Options, transform: str):
 	if fn is None:
 		print(f"Error: The following transformation isn't valid: {transform}")
 		return
-	for img_path in iter_images(dirpath, False):
+	for img_path in iter_images(dirpath, True):
 		basename = Path(img_path).stem
 		try:
 			res = fn(img_path, options)
