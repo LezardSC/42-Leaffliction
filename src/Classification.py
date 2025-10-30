@@ -2,6 +2,9 @@ from torchvision.datasets import ImageFolder
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader, random_split
 
+from Augmentation import augmentation
+from delete_augmented_images import delete_augmented_images
+
 from tqdm.auto import tqdm
 
 # Define transformations for the training and test sets
@@ -16,7 +19,18 @@ size_test_set = 100
 
 # Create a dataset for training and a dataset for testing
 dataset = ImageFolder(root="./transformations", transform=transformations)
-train_set, test_set = random_split(dataset, [len(dataset) - size_test_set, size_test_set])
+
+train_path = "./dataset_split/train"
+test_path = "./dataset_split/val"
+
+delete_augmented_images(train_path)
+print("Running data augmentation on training set...")
+augmentation(train_path)
+print("Data augmentation done.\n")
+
+# train_set, test_set = random_split(dataset, [len(dataset) - size_test_set, size_test_set])
+train_set = ImageFolder(root=train_path, transform=transformations)
+test_set = ImageFolder(root=test_path, transform=transformations)
 
 # Create a loader for the training set which will read the data within batch size and put into memory.
 train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -66,7 +80,7 @@ from torch.autograd import Variable
 
 # Function to save the model
 def saveModel():
-    path = "./myFirstModel.pth"
+    path = "./models/myFirstModel.pth"
     torch.save(model.state_dict(), path)
 
 # Function to test the model with the test dataset and print the accuracy for the test images
@@ -195,4 +209,3 @@ if __name__ == "__main__":
 
     # Test with batch of images
     testBatch()
-    
