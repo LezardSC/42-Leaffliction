@@ -48,11 +48,11 @@ def parse_args():
 	return p.parse_args()
 
 
-def delete_augmented_images():
+def delete_augmented_images(root_path=None):
 	print("Deleting all augmented images...")
 
 	args = parse_args()
-	root = Path(args.root).resolve()
+	root = Path(root_path if root_path is not None else args.root).resolve()
 	deleted = 0
 	  
 	for p in root.rglob("*"):
