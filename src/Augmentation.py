@@ -123,8 +123,8 @@ def augmentation(data_path=None):
 	data = data_path if data_path is not None else args.data
 	subfolders: dict = count_images(data)
 
-	# augment_images_until_equal(data, subfolders)
-	augment_every_images(data, subfolders)
+	augment_images_until_equal(data, subfolders)
+	# augment_every_images(data, subfolders)
 
 
 if __name__ == "__main__":

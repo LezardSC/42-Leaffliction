@@ -2,23 +2,22 @@ from torchvision.datasets import ImageFolder
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader, random_split
 
-from Augmentation import augmentation
-from delete_augmented_images import delete_augmented_images
-from compute_mean_std import compute_mean_std
+from compute_mean_std import compute_mean_std, read_mean_std
 
 from tqdm.auto import tqdm
 
 _stats_transform = transforms.Compose([transforms.ToTensor()])
 _stats_dataset = ImageFolder(root="./transformations", transform=_stats_transform)
-_stats_loader = DataLoader(dataset=_stats_dataset, batch_size=64, shuffle=False, num_workers=0)
+_stats_loader = DataLoader(dataset=_stats_dataset, batch_size=1, shuffle=False, num_workers=0)
 
-mean, std = compute_mean_std(_stats_loader)
+compute_mean_std(_stats_loader)
+mean, std = read_mean_std('./models/mean_std.csv')
 print(f"the mean of the dataset is {mean}, and the std is {std}")
 
 # Define transformations for the training and test sets
 transformations = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize(mean.tolist(), std.tolist())
+    transforms.Normalize(mean, std)
 ])
 
 batch_size = 1
@@ -52,35 +51,13 @@ print("The number of images in a test set is: ", len(test_loader)*batch_size)
 print("The number of batches per epoch is: ", len(train_loader))
 classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
 
-import torch
-import torch.nn as nn
-import torchvision
-import torch.nn.functional as F
-
-# Define a convolution neural network
-# Given that the kernel size is 5, we lose one pixel on each side of the picture going through each convolutional layer
-class Network(nn.Module):
-    def __init__(self):
-        super(Network, self).__init__()
-        
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=10, kernel_size=5, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(10)
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=15, kernel_size=5, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(15)
-        self.fc1 = nn.Linear(batch_size*15*252*252, 4) # maybe remove batch_size in here
-
-    def forward(self, input):
-        output = F.relu(self.bn1(self.conv1(input)))
-        output = F.relu(self.bn2(self.conv2(output)))
-        output = output.view(-1, batch_size*15*252*252) # and in here
-        output = self.fc1(output)
-
-        return output
-
 # Instantiate a neural network model 
-model = Network()
+from Network import Network
+model = Network(batch_size)
 
 from torch.optim import Adam
+import torch.nn as nn
+import torch
  
 # Define the loss function with Classification Cross-Entropy loss and an optimizer with Adam optimizer
 loss_fn = nn.CrossEntropyLoss()
@@ -155,63 +132,20 @@ def train(num_epochs):
 
         # Compute and print the average accuracy fo this epoch when tested over all test images
         accuracy = testAccuracy()
-        with open('test_results.txt', 'w') as f:
-            print('[%d] loss: %.3f' % (epoch + 1, running_loss / len(train_loader) * batch_size), file=f)
-            print('For epoch', epoch+1, 'the test accuracy over the whole test set is %d %%\n' % (accuracy), file=f)
+        print('[%d] loss: %.3f' % (epoch + 1, running_loss / len(train_loader) * batch_size))
+        print('For epoch', epoch+1, 'the test accuracy over the whole test set is %d %%\n' % (accuracy))
         
         # we want to save the model if the accuracy is the best
         if accuracy > best_accuracy:
             saveModel()
             best_accuracy = accuracy
-
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Function to show the images
-def imageshow(img):
-    img = img / 2 + 0.5     # unnormalize
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
-
-
-# Function to test the model with a batch of images and show the labels predictions
-def testBatch():
-    # get batch of images from the test DataLoader  
-    images, labels = next(iter(test_loader))
-
-    # show all images as one image grid
-    imageshow(torchvision.utils.make_grid(images))
-   
-    # Show the real labels on the screen 
-    print('Real labels: ', ' '.join('%5s' % classes[labels[j]] 
-                               for j in range(batch_size)))
-  
-    # Let's see what if the model identifiers the  labels of those example
-    outputs = model(images)
-    
-    # We got the probability for every labels. The highest (max) probability should be correct label
-    _, predicted = torch.max(outputs, 1)
-    
-    # Let's show the predicted labels on the screen to compare with the real ones
-    print('Predicted: ', ' '.join('%5s' % classes[predicted[j]] 
-                              for j in range(batch_size)))
     
 
 if __name__ == "__main__":
     
     # Let's build our model
-    train(num_epochs=10)
+    train(num_epochs=3)
     print('Finished Training')
 
     # Test which classes performed well
     testAccuracy()
-    
-    # Let's load the model we just created and test the accuracy per label
-    model = Network()
-    path = "models/myFirstModel.pth"
-    model.load_state_dict(torch.load(path))
-
-    # Test with batch of images
-    testBatch()
