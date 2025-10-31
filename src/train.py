@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, random_split
 
 from utils.utils import compute_mean_std, read_mean_std
 from tqdm.auto import tqdm
+import argparse
 
 from classes.Network import Network
 from torch.optim import Adam
@@ -21,9 +22,9 @@ classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
 model = Network(batch_size)
 
 
-def prepare_datasets():
+def prepare_datasets(training_dir: str):
     _stats_transform = transforms.Compose([transforms.ToTensor()])
-    _stats_dataset = ImageFolder(root="./transformations", transform=_stats_transform)
+    _stats_dataset = ImageFolder(root=training_dir, transform=_stats_transform)
     _stats_loader = DataLoader(dataset=_stats_dataset, batch_size=1, shuffle=False, num_workers=0)
 
     compute_mean_std(_stats_loader)
@@ -143,10 +144,23 @@ def train(num_epochs, train_loader):
             best_accuracy = accuracy
     
 
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-s", "--src",
+        type=str,
+        default="./Apple",
+        help="The folder you want to train on."
+    )
+
+    return parser
+
 if __name__ == "__main__":
+    args = build_parser().parse_args()
     
     # Let's build our model
-    train_loader, test_loader = prepare_datasets()
+    train_loader, test_loader = prepare_datasets(args.src)
     train(num_epochs=3, train_loader=train_loader)
     print('Finished Training')
 
