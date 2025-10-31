@@ -3,67 +3,65 @@ from torchvision.transforms import transforms
 from torch.utils.data import DataLoader, random_split
 
 from utils.utils import compute_mean_std, read_mean_std
-
 from tqdm.auto import tqdm
 
-_stats_transform = transforms.Compose([transforms.ToTensor()])
-_stats_dataset = ImageFolder(root="./transformations", transform=_stats_transform)
-_stats_loader = DataLoader(dataset=_stats_dataset, batch_size=1, shuffle=False, num_workers=0)
+from classes.Network import Network
+from torch.optim import Adam
+import torch.nn as nn
+import torch
+from torch.autograd import Variable
 
-compute_mean_std(_stats_loader)
-mean, std = read_mean_std('./models/mean_std.csv')
-print(f"the mean of the dataset is {mean}, and the std is {std}")
-
-# Define transformations for the training and test sets
-transformations = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean, std)
-])
 
 batch_size = 1
 number_of_labels = 4
 size_test_set = 200
-
-# Create a dataset for training and a dataset for testing
-dataset = ImageFolder(root="./Apple", transform=transformations)
-
-# train_path = "./dataset_split/train"
-# test_path = "./dataset_split/val"
-
-# delete_augmented_images(train_path)
-# print("Running data augmentation on training set...")
-# augmentation(train_path)
-# print("Data augmentation done.\n")
-
-train_set, test_set = random_split(dataset, [len(dataset) - size_test_set, size_test_set])
-# train_set = ImageFolder(root=train_path, transform=transformations)
-# test_set = ImageFolder(root=test_path, transform=transformations)
-
-# Create a loader for the training set which will read the data within batch size and put into memory.
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
-print("The number of images in a training set is: ", len(train_loader)*batch_size)
-
-# Create a loader for the test set which will read the data within batch size and put into memory. 
-# Note that each shuffle is set to false for the test loader.
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0)
-print("The number of images in a test set is: ", len(test_loader)*batch_size)
-
-print("The number of batches per epoch is: ", len(train_loader))
 classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
-
+    
 # Instantiate a neural network model 
-from classes.Network import Network
 model = Network(batch_size)
 
-from torch.optim import Adam
-import torch.nn as nn
-import torch
- 
-# Define the loss function with Classification Cross-Entropy loss and an optimizer with Adam optimizer
-loss_fn = nn.CrossEntropyLoss()
-optimizer = Adam(model.parameters(), lr=0.001)
 
-from torch.autograd import Variable
+def prepare_datasets():
+    _stats_transform = transforms.Compose([transforms.ToTensor()])
+    _stats_dataset = ImageFolder(root="./transformations", transform=_stats_transform)
+    _stats_loader = DataLoader(dataset=_stats_dataset, batch_size=1, shuffle=False, num_workers=0)
+
+    compute_mean_std(_stats_loader)
+    mean, std = read_mean_std('./models/mean_std.csv')
+    print(f"the mean of the dataset is {mean}, and the std is {std}")
+
+    # Define transformations for the training and test sets
+    transformations = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+
+    # Create a dataset for training and a dataset for testing
+    dataset = ImageFolder(root="./Apple", transform=transformations)
+
+    # train_path = "./dataset_split/train"
+    # test_path = "./dataset_split/val"
+
+    # delete_augmented_images(train_path)
+    # print("Running data augmentation on training set...")
+    # augmentation(train_path)
+    # print("Data augmentation done.\n")
+
+    train_set, test_set = random_split(dataset, [len(dataset) - size_test_set, size_test_set])
+    # train_set = ImageFolder(root=train_path, transform=transformations)
+    # test_set = ImageFolder(root=test_path, transform=transformations)
+
+    # Create a loader for the training set which will read the data within batch size and put into memory.
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
+    print("The number of images in a training set is: ", len(train_loader)*batch_size)
+
+    # Create a loader for the test set which will read the data within batch size and put into memory. 
+    # Note that each shuffle is set to false for the test loader.
+    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0)
+    print("The number of images in a test set is: ", len(test_loader)*batch_size)
+    print("The number of batches per epoch is: ", len(train_loader))
+
+    return train_loader, test_loader
 
 # Function to save the model
 def saveModel():
@@ -71,7 +69,7 @@ def saveModel():
     torch.save(model.state_dict(), path)
 
 # Function to test the model with the test dataset and print the accuracy for the test images
-def testAccuracy():
+def testAccuracy(test_loader):
     
     model.eval()
     accuracy = 0.0
@@ -94,8 +92,12 @@ def testAccuracy():
 
 
 # Training function. We simply have to loop over our data iterator and feed the inputs to the network and optimize.
-def train(num_epochs):
+def train(num_epochs, train_loader):
     
+    # Define the loss function with Classification Cross-Entropy loss and an optimizer with Adam optimizer
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = Adam(model.parameters(), lr=0.001)
+
     best_accuracy = 0.0
 
     # Define your execution device
@@ -144,8 +146,9 @@ def train(num_epochs):
 if __name__ == "__main__":
     
     # Let's build our model
-    train(num_epochs=3)
+    train_loader, test_loader = prepare_datasets()
+    train(num_epochs=3, train_loader=train_loader)
     print('Finished Training')
 
     # Test which classes performed well
-    testAccuracy()
+    testAccuracy(test_loader=test_loader)
