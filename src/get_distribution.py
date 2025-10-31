@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import os
 
-from utils import get_path, count_images
+from utils.utils import get_path, count_images
 
 
 def draw_distribution(subfolders):

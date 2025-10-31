@@ -7,8 +7,8 @@ from torchvision.utils import save_image
 import argparse
 import random
 
-from utils import get_path, count_images
-from delete_augmented_images import delete_augmented_images
+from utils.utils import get_path, count_images
+from utils.delete_augmented_image import delete_augmented_images
 
 
 AUGMENTATIONS = {
@@ -121,6 +121,7 @@ def build_parser() -> argparse.ArgumentParser:
 def augmentation(data_path=None):
 	args = build_parser().parse_args()
 	data = data_path if data_path is not None else args.data
+	print('data: ' + args.data)
 	subfolders: dict = count_images(data)
 
 	augment_images_until_equal(data, subfolders)

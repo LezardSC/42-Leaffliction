@@ -2,7 +2,7 @@ from torchvision.datasets import ImageFolder
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader, random_split
 
-from compute_mean_std import compute_mean_std, read_mean_std
+from utils.utils import compute_mean_std, read_mean_std
 
 from tqdm.auto import tqdm
 
@@ -52,7 +52,7 @@ print("The number of batches per epoch is: ", len(train_loader))
 classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
 
 # Instantiate a neural network model 
-from Network import Network
+from classes.Network import Network
 model = Network(batch_size)
 
 from torch.optim import Adam

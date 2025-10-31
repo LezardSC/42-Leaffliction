@@ -4,8 +4,8 @@ from torchvision.transforms import transforms
 from PIL import Image
 import matplotlib.pyplot as plt
 
-from Network import Network
-from compute_mean_std import read_mean_std
+from classes.Network import Network
+from utils.utils import read_mean_std
 
 import argparse
 
