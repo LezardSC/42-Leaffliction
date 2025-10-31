@@ -16,7 +16,7 @@ AUGMENTATIONS = {
 	"rotate": T.RandomChoice([T.RandomRotation([45, 45]), T.RandomRotation([-45, -45])], p=[0.5, 0.5]),
 	"illumination": T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
 	"blur": T.GaussianBlur(kernel_size=5, sigma=(1.0, 3.0)),
-	# "crop": T.RandomResizedCrop(size=224, scale=(0.08, 1.0), ratio=(0.9, 1.1)),
+	"crop": T.RandomResizedCrop(size=256, scale=(0.8, 1.0), ratio=(0.9, 1.1)),
 	"distortion": T.RandomPerspective(distortion_scale=0.3, p=1.0),
 }
 
