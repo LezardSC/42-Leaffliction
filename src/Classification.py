@@ -4,18 +4,26 @@ from torch.utils.data import DataLoader, random_split
 
 from Augmentation import augmentation
 from delete_augmented_images import delete_augmented_images
+from compute_mean_std import compute_mean_std
 
 from tqdm.auto import tqdm
+
+_stats_transform = transforms.Compose([transforms.ToTensor()])
+_stats_dataset = ImageFolder(root="./transformations", transform=_stats_transform)
+_stats_loader = DataLoader(dataset=_stats_dataset, batch_size=64, shuffle=False, num_workers=0)
+
+mean, std = compute_mean_std(_stats_loader)
+print(f"the mean of the dataset is {mean}, and the std is {std}")
 
 # Define transformations for the training and test sets
 transformations = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    transforms.Normalize(mean.tolist(), std.tolist())
 ])
 
 batch_size = 1
 number_of_labels = 4
-size_test_set = 100
+size_test_set = 200
 
 # Create a dataset for training and a dataset for testing
 dataset = ImageFolder(root="./transformations", transform=transformations)
@@ -59,12 +67,12 @@ class Network(nn.Module):
         self.bn1 = nn.BatchNorm2d(10)
         self.conv2 = nn.Conv2d(in_channels=10, out_channels=15, kernel_size=5, stride=1, padding=1)
         self.bn2 = nn.BatchNorm2d(15)
-        self.fc1 = nn.Linear(batch_size*15*252*252, 4)
+        self.fc1 = nn.Linear(batch_size*15*252*252, 4) # maybe remove batch_size in here
 
     def forward(self, input):
         output = F.relu(self.bn1(self.conv1(input)))
         output = F.relu(self.bn2(self.conv2(output)))
-        output = output.view(-1, batch_size*15*252*252)
+        output = output.view(-1, batch_size*15*252*252) # and in here
         output = self.fc1(output)
 
         return output
@@ -147,8 +155,9 @@ def train(num_epochs):
 
         # Compute and print the average accuracy fo this epoch when tested over all test images
         accuracy = testAccuracy()
-        print('[%d] loss: %.3f' % (epoch + 1, running_loss / len(train_loader) * batch_size))
-        print('For epoch', epoch+1, 'the test accuracy over the whole test set is %d %%' % (accuracy))
+        with open('test_results.txt', 'w') as f:
+            print('[%d] loss: %.3f' % (epoch + 1, running_loss / len(train_loader) * batch_size), file=f)
+            print('For epoch', epoch+1, 'the test accuracy over the whole test set is %d %%\n' % (accuracy), file=f)
         
         # we want to save the model if the accuracy is the best
         if accuracy > best_accuracy:
@@ -193,7 +202,7 @@ def testBatch():
 if __name__ == "__main__":
     
     # Let's build our model
-    train(3)
+    train(num_epochs=10)
     print('Finished Training')
 
     # Test which classes performed well
