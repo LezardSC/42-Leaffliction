@@ -25,7 +25,7 @@ number_of_labels = 4
 size_test_set = 200
 
 # Create a dataset for training and a dataset for testing
-dataset = ImageFolder(root="./transformations", transform=transformations)
+dataset = ImageFolder(root="./Apple", transform=transformations)
 
 # train_path = "./dataset_split/train"
 # test_path = "./dataset_split/val"

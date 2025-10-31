@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from Network import Network
 from compute_mean_std import read_mean_std
 
-
+import argparse
 
 classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
 
@@ -44,13 +44,13 @@ def _display_result(img, classification: str):
 
     plt.show()
 
-def predict(img_path: str):
+def predict(img_path: str, model_path: str, stats_path: str):
     # Load model
     model = Network(1)
-    model.load_state_dict(torch.load('models/myFirstModel.pth'))
+    model.load_state_dict(torch.load(model_path))
 
     # Define tranformations
-    mean, std = read_mean_std('models/mean_std.csv')
+    mean, std = read_mean_std(stats_path)
     transformations = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
@@ -66,7 +66,38 @@ def predict(img_path: str):
     
     _display_result(img, classes[predicted])
 
-    
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-i", "--img",
+        type=str,
+        default="./Apple/Apple_rust/image (1).JPG",
+        help="The image or folder that you want to predict."
+    )
+
+    parser.add_argument(
+        "-m", "--model",
+        type=str,
+        default="models/myFirstModel.pth",
+        help="Path to the pytorch model (.pth)"
+    )
+
+    parser.add_argument(
+        "-s", "--stats",
+        type=str,
+        default="models/mean_std.csv",
+        help="Mean and Standard Deviation used to normalize data (.csv)"
+    )
+
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
+    predict(args.img, args.model, args.stats)
+
 
 if __name__ == "__main__":
-    predict('./Apple/Apple_rust/image (1).JPG')
+    main()
