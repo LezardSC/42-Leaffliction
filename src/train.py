@@ -13,12 +13,12 @@ import torch
 from torch.autograd import Variable
 
 
-batch_size = 1
+batch_size = 8
 number_of_labels = 4
 size_test_set = 200
 classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
     
-# Instantiate a neural network model 
+# Instantiate a neural network model
 model = Network(batch_size)
 
 
@@ -38,15 +38,7 @@ def prepare_datasets(training_dir: str):
     ])
 
     # Create a dataset for training and a dataset for testing
-    dataset = ImageFolder(root="./Apple", transform=transformations)
-
-    # train_path = "./dataset_split/train"
-    # test_path = "./dataset_split/val"
-
-    # delete_augmented_images(train_path)
-    # print("Running data augmentation on training set...")
-    # augmentation(train_path)
-    # print("Data augmentation done.\n")
+    dataset = ImageFolder(root=training_dir, transform=transformations)
 
     train_set, test_set = random_split(dataset, [len(dataset) - size_test_set, size_test_set])
     # train_set = ImageFolder(root=train_path, transform=transformations)
@@ -93,11 +85,18 @@ def testAccuracy(test_loader):
 
 
 # Training function. We simply have to loop over our data iterator and feed the inputs to the network and optimize.
-def train(num_epochs, train_loader):
+def train(num_epochs, train_loader, test_loader):
     
     # Define the loss function with Classification Cross-Entropy loss and an optimizer with Adam optimizer
     loss_fn = nn.CrossEntropyLoss()
     optimizer = Adam(model.parameters(), lr=0.001)
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='max',
+        factor=0.5,
+        patience=2
+    )
 
     best_accuracy = 0.0
 
@@ -134,7 +133,9 @@ def train(num_epochs, train_loader):
             running_loss += loss.item()     # extract the loss value
 
         # Compute and print the average accuracy fo this epoch when tested over all test images
-        accuracy = testAccuracy()
+        accuracy = testAccuracy(test_loader=test_loader)
+        scheduler.step(accuracy)
+        print(f"Current LR: {scheduler.get_last_lr()[0]:.6f}")
         print('[%d] loss: %.3f' % (epoch + 1, running_loss / len(train_loader) * batch_size))
         print('For epoch', epoch+1, 'the test accuracy over the whole test set is %d %%\n' % (accuracy))
         
@@ -161,7 +162,7 @@ if __name__ == "__main__":
     
     # Let's build our model
     train_loader, test_loader = prepare_datasets(args.src)
-    train(num_epochs=3, train_loader=train_loader)
+    train(num_epochs=8, train_loader=train_loader, test_loader=test_loader)
     print('Finished Training')
 
     # Test which classes performed well
