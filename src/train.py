@@ -7,7 +7,7 @@ from tqdm.auto import tqdm
 import argparse
 
 from classes.Network import Network
-from torch.optim import Adam
+from torch.optim import AdamW
 import torch.nn as nn
 import torch
 from torch.autograd import Variable
@@ -89,7 +89,7 @@ def train(num_epochs, train_loader, test_loader):
     
     # Define the loss function with Classification Cross-Entropy loss and an optimizer with Adam optimizer
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = Adam(model.parameters(), lr=0.001)
+    optimizer = AdamW(model.parameters(), lr=0.001, weight_decay=0.0001)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
