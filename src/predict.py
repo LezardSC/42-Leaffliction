@@ -83,7 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-m", "--model",
         type=str,
-        default="models/myFirstModel.pth",
+        default="models/bestModel.pth",
         help="Path to the pytorch model (.pth)"
     )
 
