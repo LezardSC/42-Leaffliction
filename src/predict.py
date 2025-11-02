@@ -37,11 +37,21 @@ def _display_result(img, classification: str):
                                  facecolor=(0.1, 0.1, 0.1))
     ax_txt_result.set_axis_off()
     ax_txt_result.text(0.5, 0.02,  # Position (x, y) - centered at bottom
-                       'Class predicted : ' + classification,
+                       'Class predicted : ',
                        backgroundcolor=(0.1, 0.1, 0.1),
                        fontsize=12,
                        color=(1, 1, 1),
-                       ha='center',  # Horizontal alignment
+                       ha='right',
+                       va='center',
+                       zorder=2)
+    
+    ax_txt_result.text(0.5, 0.02,
+                       classification,
+                       fontsize=12,
+                       color='lime',
+                       fontweight='bold',
+                       ha='left',
+                       va='center',
                        zorder=2)
 
     plt.show()
