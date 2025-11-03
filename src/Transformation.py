@@ -4,16 +4,25 @@ from pathlib import Path
 import argparse
 import matplotlib.pyplot as plt
 from plantcv import plantcv as pcv
-import numpy as np
 import os
 import sys
+from PIL import Image
 
 
-def show_array(arr: np.ndarray) -> None:
-    if not isinstance(arr, np.ndarray):
-        raise TypeError(f"show_array attend un np.ndarray, pas {type(arr)}")
-    plt.imshow(arr)
-    plt.axis("off")
+def _show_transforms(transformations: dict):
+    nrows = 2
+    ncols = 3
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols)
+    for i in range(nrows * ncols):
+        axs[i // 3][i % 3].set_axis_off()
+
+    i = 0
+    for t, img in transformations.items():
+        array = Image.fromarray(img)
+        axs[i // 3][i % 3].imshow(array)
+        axs[i // 3][i % 3].set_title(t)
+        i += 1
+
     plt.show()
 
 
@@ -34,20 +43,18 @@ def save_result(res: dict,
             print(f"saved: {out_k}")
 
 
-def transform_single_file(path: str, options: Options, transform: str):
-    t = Transformation()
+def transform_single_file(path: str, options: Options):
+    # Need to apply and display all transforms
+    transformations = Transformation()
+    attributes = dir(Transformation)
+    res = {}
 
-    fn = getattr(t, transform)
-    if fn is None:
-        print(f"Error: The transformation doesn't exist: {transform}")
-        return
-    res = fn(path, options)
+    for at in attributes:
+        if not at.startswith('_') and at != 'histogram':
+            fn = getattr(transformations, at)
+            res[at] = fn(path, options)["display"]
 
-    if res is None:
-        print("Nothing to do")
-        return
-
-    show_array(res["display"])
+    _show_transforms(res)
 
 
 def transform_for_directory(dirpath: str, options: Options, transform: str):
@@ -122,7 +129,7 @@ def main():
     if is_dir:
         transform_for_directory(src, options, transform=args.transformation)
     elif os.path.isfile(src):
-        transform_single_file(src, options, transform=args.transformation)
+        transform_single_file(src, options)
 
 
 if __name__ == "__main__":
