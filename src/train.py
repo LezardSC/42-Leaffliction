@@ -11,6 +11,7 @@ from torch.optim import AdamW
 import torch.nn as nn
 import torch
 from torch.autograd import Variable
+import os
 
 
 batch_size = 8
@@ -22,7 +23,7 @@ classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
 model = Network(batch_size)
 
 
-def prepare_datasets(training_dir: str):
+def prepare_datasets(training_dir: str, checkpoints_dir: str):
     _stats_transform = transforms.Compose([transforms.ToTensor()])
     _stats_dataset = ImageFolder(root=training_dir, transform=_stats_transform)
     _stats_loader = DataLoader(dataset=_stats_dataset,
@@ -31,7 +32,7 @@ def prepare_datasets(training_dir: str):
                                num_workers=0)
 
     compute_mean_std(_stats_loader)
-    mean, std = read_mean_std('./models/mean_std.csv')
+    mean, std = read_mean_std(os.path.join(checkpoints_dir, 'mean_std.csv'))
     print(f"the mean of the dataset is {mean}, and the std is {std}")
 
     # Define transformations for the training and test sets
@@ -70,12 +71,6 @@ def prepare_datasets(training_dir: str):
     return train_loader, test_loader
 
 
-# Function to save the model
-def saveModel():
-    path = "./models/myFirstModel.pth"
-    torch.save(model.state_dict(), path)
-
-
 # Function to test the model with the test dataset
 def testAccuracy(test_loader):
 
@@ -100,7 +95,7 @@ def testAccuracy(test_loader):
 
 
 # Training function.
-def train(num_epochs, train_loader, test_loader):
+def train(num_epochs, train_loader, test_loader, checkpoint_dir):
 
     # Define the loss function and optimizer
     loss_fn = nn.CrossEntropyLoss()
@@ -157,10 +152,10 @@ def train(num_epochs, train_loader, test_loader):
               'the test accuracy over the whole test set is %d %%\n' %
               (accuracy))
 
-        # we want to save the model if the accuracy is the best
+        torch.save(model.state_dict(), os.path.join(checkpoint_dir, "lastModel.pth"))
         if accuracy > best_accuracy:
-            saveModel()
             best_accuracy = accuracy
+            torch.save(model.state_dict(), os.path.join(checkpoint_dir, "bestModel.pth"))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -172,6 +167,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="./Apple",
         help="The folder you want to train on."
     )
+    parser.add_argument(
+        "-m", "--models-dir",
+        type=str,
+        default="./models",
+        help="The folder you want to save the models."
+    )
 
     return parser
 
@@ -180,8 +181,8 @@ if __name__ == "__main__":
     args = build_parser().parse_args()
 
     # Let's build our model
-    train_loader, test_loader = prepare_datasets(args.src)
-    train(num_epochs=8, train_loader=train_loader, test_loader=test_loader)
+    train_loader, test_loader = prepare_datasets(args.src, checkpoints_dir=args.models_dir)
+    train(num_epochs=8, train_loader=train_loader, test_loader=test_loader, checkpoint_dir=args.models_dir)
     print('Finished Training')
 
     # Test which classes performed well
