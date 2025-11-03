@@ -179,7 +179,7 @@ if __name__ == "__main__":
     args = build_parser().parse_args()
 
     # Let's build our model
-    model = Network(batch_size)
+    model = Network()
     train_loader, test_loader = prepare_datasets(args.src, args.models_dir)
     train(model=model,
           num_epochs=8,

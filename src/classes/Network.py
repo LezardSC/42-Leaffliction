@@ -6,9 +6,8 @@ import torch.nn.functional as F
 # Given that the kernel size is 5
 # We lose one pixel on each side going through each convolutional layer
 class Network(nn.Module):
-    def __init__(self, batch_size):
+    def __init__(self):
         super(Network, self).__init__()
-        self.batch_size = batch_size
 
         self.conv1 = nn.Conv2d(in_channels=3,
                                out_channels=10,
