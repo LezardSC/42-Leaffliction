@@ -18,9 +18,6 @@ batch_size = 8
 number_of_labels = 4
 size_test_set = 200
 
-# Instantiate a neural network model
-model = Network(batch_size)
-
 
 def prepare_datasets(training_dir: str, checkpoints_dir: str):
     _stats_transform = transforms.Compose([transforms.ToTensor()])
@@ -71,7 +68,7 @@ def prepare_datasets(training_dir: str, checkpoints_dir: str):
 
 
 # Function to test the model with the test dataset
-def testAccuracy(test_loader):
+def testAccuracy(model, test_loader):
 
     model.eval()
     accuracy = 0.0
@@ -94,7 +91,7 @@ def testAccuracy(test_loader):
 
 
 # Training function.
-def train(num_epochs, train_loader, test_loader, checkpoint_dir):
+def train(model, num_epochs, train_loader, test_loader, checkpoint_dir):
 
     # Define the loss function and optimizer
     loss_fn = nn.CrossEntropyLoss()
@@ -151,10 +148,12 @@ def train(num_epochs, train_loader, test_loader, checkpoint_dir):
               'the test accuracy over the whole test set is %d %%\n' %
               (accuracy))
 
-        torch.save(model.state_dict(), os.path.join(checkpoint_dir, "lastModel.pth"))
+        torch.save(model.state_dict(),
+                   os.path.join(checkpoint_dir, "lastModel.pth"))
         if accuracy > best_accuracy:
             best_accuracy = accuracy
-            torch.save(model.state_dict(), os.path.join(checkpoint_dir, "bestModel.pth"))
+            torch.save(model.state_dict(),
+                       os.path.join(checkpoint_dir, "bestModel.pth"))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -180,9 +179,14 @@ if __name__ == "__main__":
     args = build_parser().parse_args()
 
     # Let's build our model
-    train_loader, test_loader = prepare_datasets(args.src, checkpoints_dir=args.models_dir)
-    train(num_epochs=8, train_loader=train_loader, test_loader=test_loader, checkpoint_dir=args.models_dir)
+    model = Network(batch_size)
+    train_loader, test_loader = prepare_datasets(args.src, args.models_dir)
+    train(model=model,
+          num_epochs=8,
+          train_loader=train_loader,
+          test_loader=test_loader,
+          checkpoint_dir=args.models_dir)
     print('Finished Training')
 
     # Test which classes performed well
-    testAccuracy(test_loader=test_loader)
+    testAccuracy(model=model, test_loader=test_loader)

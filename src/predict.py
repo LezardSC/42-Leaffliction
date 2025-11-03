@@ -45,7 +45,7 @@ def _display_result(img, classification: str):
                        ha='right',
                        va='center',
                        zorder=2)
-    
+
     ax_txt_result.text(0.5, 0.02,
                        classification,
                        fontsize=12,
