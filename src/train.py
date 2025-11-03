@@ -17,7 +17,6 @@ import os
 batch_size = 8
 number_of_labels = 4
 size_test_set = 200
-classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
 
 # Instantiate a neural network model
 model = Network(batch_size)

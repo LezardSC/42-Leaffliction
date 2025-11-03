@@ -1,3 +1,4 @@
+import os
 import torch
 from torchvision.transforms import transforms
 from PIL import Image
@@ -57,6 +58,14 @@ def _display_result(img, classification: str):
     plt.show()
 
 
+def get_classes(path: str):
+    classes = []
+    for subfolder in os.listdir(path):
+        if subfolder[0] != '.':
+            classes.append(subfolder)
+    return classes
+
+
 def predict(img_path: str, model_path: str, stats_path: str):
     # Load model
     model = Network(1)
@@ -77,6 +86,7 @@ def predict(img_path: str, model_path: str, stats_path: str):
     output = model(input)
     _, predicted = torch.max(output.data, 1)
 
+    classes = get_classes(img_path.split('/')[0])
     _display_result(img, classes[predicted])
 
 
@@ -86,7 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-i", "--img",
         type=str,
-        default="./Apple/Apple_rust/image (1).JPG",
+        default="Apple/Apple_rust/image (1).JPG",
         help="The image or folder that you want to predict."
     )
 
@@ -113,4 +123,5 @@ def main():
 
 
 if __name__ == "__main__":
+    get_classes('./Apple')
     main()
