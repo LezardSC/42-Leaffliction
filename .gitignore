@@ -7,3 +7,4 @@
 transformations/
 models/
 dataset_split/
+*augmented_directory/
