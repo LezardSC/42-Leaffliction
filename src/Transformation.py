@@ -14,13 +14,13 @@ def _show_transforms(transformations: dict):
     ncols = 3
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols)
     for i in range(nrows * ncols):
-        axs[i // 3][i % 3].set_axis_off()
+        axs[i // ncols][i % ncols].set_axis_off()
 
     i = 0
     for t, img in transformations.items():
         array = Image.fromarray(img)
-        axs[i // 3][i % 3].imshow(array)
-        axs[i // 3][i % 3].set_title(t)
+        axs[i // ncols][i % ncols].imshow(array)
+        axs[i // ncols][i % ncols].set_title(t)
         i += 1
 
     plt.show()
