@@ -7,6 +7,14 @@ from plantcv import plantcv as pcv
 import os
 import sys
 from PIL import Image
+import numpy as np
+import tempfile
+
+def _histogram_chart_to_ndarray(chart) -> np.ndarray:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=True) as tmp:
+        pcv.print_image(img=chart, filename=tmp.name)
+        return np.array(Image.open(tmp.name).convert("RGB"))
+
 
 
 def _show_transforms(transformations: dict):
@@ -49,12 +57,28 @@ def transform_single_file(path: str, options: Options):
     attributes = dir(Transformation)
     res = {}
 
+    hist_img = None
+
     for at in attributes:
         if not at.startswith('_') and at != 'histogram':
             fn = getattr(transformations, at)
             res[at] = fn(path, options)["display"]
+        
+        elif at == 'histogram':
+            try:
+                out = getattr(transformations, at)(path, options)
+                hist_img = _histogram_chart_to_ndarray(out["display"])
+            except Exception as e:
+                print(f"[warn] histogram failed: {e}")
 
     _show_transforms(res)
+
+    if hist_img is not None:
+        plt.figure()
+        plt.imshow(hist_img)
+        plt.axis('off')
+        plt.title('histogram')
+        plt.show()
 
 
 def transform_for_directory(dirpath: str, options: Options, transform: str):
