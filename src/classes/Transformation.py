@@ -92,8 +92,8 @@ class Transformation:
          chain,
          max_dist) = pcv.homology.acute(img=img,
                                         mask=mask,
-                                        win=3,
-                                        threshold=110)
+                                        win=10,
+                                        threshold=160)
 
         for pt in homolog_pts:
             self._draw_point(img, pt[0][0], pt[0][1], 5)
