@@ -27,6 +27,25 @@ AUGMENTATIONS = {
 def _get_highest_nb_of_images(subfolders: dict) -> int:
     return subfolders[max(subfolders, key=subfolders.get)]
 
+def augment_single_file(path: str):
+    dirname, basename = os.path.split(path)
+    name, ext = os.path.splitext(basename)
+
+    img = Image.open(path).convert("RGB")
+
+    for transformation_name, transformation in AUGMENTATIONS.items():
+        transforms = T.Compose([
+            transformation,
+            T.ToTensor(),
+        ])
+        augmentation_img = transforms(img)
+
+        new_name = f"{name}_" + transformation_name + f"{ext}"
+        new_path = os.path.join(dirname, new_name)
+
+        save_image(augmentation_img, new_path)
+
+
 
 def augment_images_until_equal(main_dir: str, subfolders: dict):
     highest = _get_highest_nb_of_images(subfolders)
@@ -84,7 +103,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "-d", "--data",
+        "-s", "--src",
         type=str,
         default=get_path("Apple/"),
         help="The path to the dataset."
@@ -95,14 +114,25 @@ def build_parser() -> argparse.ArgumentParser:
 
 def augmentation(data_path=None):
     args = build_parser().parse_args()
-    data = data_path if data_path is not None else args.data
-    print('data: ' + args.data)
-    subfolders: dict = count_images(data)
+    data = data_path if data_path is not None else args.src
+    print('src: ' + args.src)
 
-    augment_images_until_equal(data, subfolders)
-    # augment_every_images(data, subfolders)
+    src = args.src
+
+    if not os.path.exists(src):
+        print(f"Error: The following path doesn't exist: {src}")
+
+    is_dir = os.path.isdir(src)
+
+    if is_dir:
+        delete_augmented_images(src)
+        subfolders: dict = count_images(data)
+        augment_images_until_equal(data, subfolders)
+    elif os.path.isfile(src):
+        augment_single_file(src)
+        
+
 
 
 if __name__ == "__main__":
-    delete_augmented_images()
     augmentation()
