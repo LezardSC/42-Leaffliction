@@ -17,10 +17,14 @@ def _histogram_chart_to_ndarray(chart) -> np.ndarray:
         return np.array(Image.open(tmp.name).convert("RGB"))
 
 
-def _show_transforms(transformations: dict):
-    nrows = 2
+def _show_transforms(transformations: dict, hist_img):
+    nrows = 3
     ncols = 3
-    fig, axs = plt.subplots(nrows=nrows, ncols=ncols)
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(5, 8))
+    gridspec = axs[0, 0].get_subplotspec().get_gridspec()
+    for a in axs[nrows - 1, :]:
+        a.remove()
+
     for i in range(nrows * ncols):
         axs[i // ncols][i % ncols].set_axis_off()
 
@@ -30,6 +34,13 @@ def _show_transforms(transformations: dict):
         axs[i // ncols][i % ncols].imshow(array)
         axs[i // ncols][i % ncols].set_title(t)
         i += 1
+
+    subfig = fig.add_subfigure(gridspec[nrows - 1, :])
+    ax_hist = subfig.add_axes((0.1, 0.1, 0.9, 0.9))
+    ax_hist.set_axis_off()
+    ax_hist.imshow(hist_img)
+    ax_hist.set_title('histogram')
+    fig.tight_layout()
 
     plt.show()
 
@@ -71,14 +82,7 @@ def transform_single_file(path: str, options: Options):
             except Exception as e:
                 print(f"[warn] histogram failed: {e}")
 
-    _show_transforms(res)
-
-    if hist_img is not None:
-        plt.figure()
-        plt.imshow(hist_img)
-        plt.axis('off')
-        plt.title('histogram')
-        plt.show()
+    _show_transforms(res, hist_img)
 
 
 def transform_for_directory(dirpath: str, options: Options, transform: str):
