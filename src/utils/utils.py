@@ -61,6 +61,8 @@ def compute_mean_std(dataloader):
     # std = sqrt(E[X^2] - (E[X])^2)
     std = (channels_squared_sum / num_batches - mean ** 2) ** 0.5
 
+    if not os.path.exists('./models'):
+        os.makedirs('./models')
     with open('./models/mean_std.csv', 'w') as csvfile:
         fieldnames = ['Image', 'Mean', 'Std']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
