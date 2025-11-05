@@ -2,6 +2,7 @@ import os
 from PIL import Image
 import torchvision.transforms as T
 from torchvision.utils import save_image
+import matplotlib.pyplot as plt
 import argparse
 import random
 
@@ -24,8 +25,23 @@ AUGMENTATIONS = {
 }
 
 
-def _get_highest_nb_of_images(subfolders: dict) -> int:
-    return subfolders[max(subfolders, key=subfolders.get)]
+def _show_augmentations_grid(augmentations: dict, nrows, ncols):
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7, 6))
+    gridspec = axs[0, 0].get_subplotspec().get_gridspec
+    
+    for i in range(nrows * ncols):
+        axs[i // ncols][i % ncols].set_axis_off()
+
+    i = 0
+    for t, img in augmentations.items():
+        ax = axs[i // ncols][i % ncols]
+
+        ax.imshow(img)
+        ax.set_title(t)
+        i += 1
+    plt.tight_layout()
+    plt.show()
+
 
 def augment_single_file(path: str):
     dirname, basename = os.path.split(path)
@@ -33,18 +49,32 @@ def augment_single_file(path: str):
 
     img = Image.open(path).convert("RGB")
 
+    augmentations_to_draw = {}
+
     for transformation_name, transformation in AUGMENTATIONS.items():
         transforms = T.Compose([
             transformation,
             T.ToTensor(),
         ])
+
         augmentation_img = transforms(img)
 
         new_name = f"{name}_" + transformation_name + f"{ext}"
         new_path = os.path.join(dirname, new_name)
-
         save_image(augmentation_img, new_path)
+        print(f"Saved: {new_path}")
 
+        augmentations_to_draw[transformation_name] = augmentation_img.permute(1, 2, 0).detach().numpy()
+
+    _show_augmentations_grid(
+        augmentations_to_draw,
+        nrows=2,
+        ncols=3,
+    )
+
+
+def _get_highest_nb_of_images(subfolders: dict) -> int:
+    return subfolders[max(subfolders, key=subfolders.get)]
 
 
 def augment_images_until_equal(main_dir: str, subfolders: dict):
