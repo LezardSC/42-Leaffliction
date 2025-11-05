@@ -27,14 +27,6 @@ AUGMENTATIONS = {
 def _get_highest_nb_of_images(subfolders: dict) -> int:
     return subfolders[max(subfolders, key=subfolders.get)]
 
-def _save_image_in_both_folders(augmentation, dataset_path, subfolder, image_name):
-    save_image(augmentation, dataset_path)
-
-    out_aug_dir = os.path.join('./augmented_directory', subfolder)
-    os.makedirs(out_aug_dir, exist_ok=True)
-    mirror_path = os.path.join(out_aug_dir, image_name)
-    save_image(augmentation, mirror_path)
-
 
 def augment_images_until_equal(main_dir: str, subfolders: dict):
     highest = _get_highest_nb_of_images(subfolders)
@@ -80,7 +72,7 @@ def augment_images_until_equal(main_dir: str, subfolders: dict):
 
             new_path = os.path.join(path, new_name)
 
-            _save_image_in_both_folders(augmentation, new_path, subfolder, new_name)
+            save_image(augmentation, new_path)
             existing.add(new_name.lower())
             created += 1
 

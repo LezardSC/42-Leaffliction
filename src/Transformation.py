@@ -10,11 +10,11 @@ from PIL import Image
 import numpy as np
 import tempfile
 
+
 def _histogram_chart_to_ndarray(chart) -> np.ndarray:
     with tempfile.NamedTemporaryFile(suffix=".png", delete=True) as tmp:
         pcv.print_image(img=chart, filename=tmp.name)
         return np.array(Image.open(tmp.name).convert("RGB"))
-
 
 
 def _show_transforms(transformations: dict):
@@ -63,7 +63,7 @@ def transform_single_file(path: str, options: Options):
         if not at.startswith('_') and at != 'histogram':
             fn = getattr(transformations, at)
             res[at] = fn(path, options)["display"]
-        
+
         elif at == 'histogram':
             try:
                 out = getattr(transformations, at)(path, options)
