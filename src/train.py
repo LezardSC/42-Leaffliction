@@ -92,7 +92,7 @@ def test_accuracy(model, test_loader):
 
 
 # Training function.
-def train(model, num_epochs, train_loader, test_loader, checkpoint_dir):
+def train(model, num_epochs, train_loader, test_loader, checkpoint_dir, fruit):
 
     # Define the loss function and optimizer
     loss_fn = nn.CrossEntropyLoss()
@@ -150,11 +150,12 @@ def train(model, num_epochs, train_loader, test_loader, checkpoint_dir):
               (accuracy))
 
         torch.save(model.state_dict(),
-                   os.path.join(checkpoint_dir, "lastModel.pth"))
+                   os.path.join(checkpoint_dir, "lastModel" + fruit + ".pth"))
         if accuracy > best_accuracy:
             best_accuracy = accuracy
             torch.save(model.state_dict(),
-                       os.path.join(checkpoint_dir, "bestModel.pth"))
+                       os.path.join(checkpoint_dir,
+                                    "bestModel" + fruit + ".pth"))
 
 
 def store_model_compressed(src_path: str, model_path: str):
@@ -182,11 +183,20 @@ def build_parser() -> argparse.ArgumentParser:
         default="./Apple",
         help="The folder you want to train on."
     )
+
     parser.add_argument(
         "-m", "--models-dir",
         type=str,
         default="./models",
         help="The folder you want to save the models."
+    )
+
+    parser.add_argument(
+        "-f", "--fruit",
+        type=str,
+        choices={"Apple", "Grape"},
+        default="Apple",
+        help="The fruit leaf you want to predict"
     )
 
     return parser

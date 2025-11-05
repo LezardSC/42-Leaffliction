@@ -2,6 +2,20 @@ import os
 from pathlib import Path
 import torch
 import csv
+from enum import Enum
+
+
+class FruitDisease(Enum):
+    APPLE = ['Black rot', 'Healthy', 'Rust', 'Scab']
+    GRAPE = ['Black rot', 'Esca', 'Healthy', 'Spot']
+
+
+def get_fruit_diseases(fruit: str) -> FruitDisease:
+    match(fruit):
+        case 'Apple':
+            return FruitDisease.APPLE
+        case 'Grape':
+            return FruitDisease.GRAPE
 
 
 # Generic utils functions #
