@@ -1,14 +1,16 @@
+import os
 import torch
 from torchvision.transforms import transforms
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader
 from PIL import Image
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from classes.Network import Network
 from utils.utils import read_mean_std
 
 import argparse
-
-classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
 
 
 def _display_result(img, classification: str):
@@ -44,7 +46,7 @@ def _display_result(img, classification: str):
                        ha='right',
                        va='center',
                        zorder=2)
-    
+
     ax_txt_result.text(0.5, 0.02,
                        classification,
                        fontsize=12,
@@ -57,11 +59,40 @@ def _display_result(img, classification: str):
     plt.show()
 
 
-def predict(img_path: str, model_path: str, stats_path: str):
-    # Load model
-    model = Network(1)
-    model.load_state_dict(torch.load(model_path))
+def _prepare_testing_dataset(dataset_path: str, stats_path: str):
+    mean, std = read_mean_std(stats_path)
+    print(f"the mean of the dataset is {mean}, and the std is {std}")
 
+    # Define transformations for the training and test sets
+    transformations = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+
+    # Create a dataset for training and a dataset for testing
+    dataset = ImageFolder(root=dataset_path, transform=transformations)
+
+    # Create a loader for the testing
+    # Note that each shuffle is set to false for the test loader.
+    test_loader = DataLoader(dataset,
+                             batch_size=1,
+                             shuffle=False,
+                             num_workers=0)
+    print("The number of images in a test set is: ",
+          len(test_loader))
+
+    return test_loader
+
+
+def _get_classes(path: str):
+    classes = []
+    for subfolder in os.listdir(path):
+        if subfolder[0] != '.':
+            classes.append(subfolder)
+    return classes
+
+
+def predict_data(model: Network, img_path: str, stats_path: str):
     # Define tranformations
     mean, std = read_mean_std(stats_path)
     transformations = transforms.Compose([
@@ -77,7 +108,32 @@ def predict(img_path: str, model_path: str, stats_path: str):
     output = model(input)
     _, predicted = torch.max(output.data, 1)
 
+    classes = _get_classes(img_path.split('/')[0])
     _display_result(img, classes[predicted])
+
+
+# Function to test the model with the test dataset
+def predict_dataset(model, dataset_path, stats_path):
+
+    model.eval()
+    accuracy = 0.0
+    total = 0.0
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    test_loader = _prepare_testing_dataset(dataset_path, stats_path)
+
+    with torch.no_grad():
+        for data in tqdm(test_loader, desc="Testing", leave=False):
+            images, labels = data
+            # run the model on the test set to predict labels
+            outputs = model(images.to(device))
+            # the label with the highest energy will be our prediction
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            accuracy += (predicted == labels.to(device)).sum().item()
+
+    # compute the accuracy over all test images
+    accuracy = (100 * accuracy / total)
+    print(f"Accuracy for the given dataset : {accuracy} %")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -86,7 +142,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-i", "--img",
         type=str,
-        default="./Apple/Apple_rust/image (1).JPG",
+        default="Apple/Apple_rust/image (1).JPG",
         help="The image or folder that you want to predict."
     )
 
@@ -109,7 +165,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main():
     args = build_parser().parse_args()
-    predict(args.img, args.model, args.stats)
+    model = Network()
+    model.load_state_dict(torch.load(args.model))
+
+    if os.path.isdir(args.img):
+        predict_dataset(model, args.img, args.stats)
+    else:
+        predict_data(model, args.img, args.stats)
 
 
 if __name__ == "__main__":

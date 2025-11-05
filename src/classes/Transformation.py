@@ -25,9 +25,6 @@ class Transformation:
     def __repr__(self):
         pass
 
-    def all_transformations(self, img_path: str, options: Options):
-        return None
-
     def _draw_point(self, img, x: int, y: int, size: int):
         for y_img in range(len(img)):
             for x_img in range(len(img[y_img])):
@@ -63,7 +60,7 @@ class Transformation:
         self._draw_rectangle(img, x, y, length, height)
 
         return {
-            "tag": "landmarks",
+            "tag": "roi",
             "display": img,
         }
 
@@ -77,7 +74,7 @@ class Transformation:
                                                          hist_data=True)
 
         return {
-            "tag": "landmarks",
+            "tag": "histogram",
             "display": hist_figure
         }
 
@@ -198,6 +195,13 @@ class Transformation:
         # Save returned images with more specific naming
         pcv.print_image(shape_image, '/home/malia/setaria_shape_img.png')
         return {
-            "tag": "mask",
+            "tag": "analyze",
             "display": shape_image,
+        }
+
+    def original(self, img_path: str, options: Options):
+        img, _, _ = pcv.readimage(img_path)
+        return {
+            "tag": "original",
+            "display": img,
         }

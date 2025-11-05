@@ -80,46 +80,6 @@ def augment_images_until_equal(main_dir: str, subfolders: dict):
     print(f"All folders now contains {highest} images.")
 
 
-def augment_every_images(main_dir: str, subfolders: dict):
-    for subfolder, nb_of_images in subfolders.items():
-        print(f"starting augmentation for folder {subfolder}...")
-
-        path = os.path.join(main_dir, subfolder)
-        files = [f for f in os.listdir(path)
-                 if f.lower().endswith((".jpg",
-                                        ".jpeg",
-                                        ".png",
-                                        ".bmp",
-                                        ".webp",
-                                        ".tiff"))]
-        if not files:
-            continue
-        existing = {fname.lower() for fname in os.listdir(path)}
-
-        for filename in files:
-            for transfo_name, transfo in list(AUGMENTATIONS.items()):
-                transforms = T.Compose([
-                    transfo,
-                    T.ToTensor(),
-                ])
-
-                filepath = os.path.join(path, filename)
-
-                img = Image.open(filepath).convert("RGB")
-                augmentation = transforms(img)
-
-                name, ext = os.path.splitext(filename)
-
-                new_name = f"{name}_" + transfo_name + f"{ext}"
-                if new_name.lower() in existing:
-                    continue
-
-                new_path = os.path.join(path, new_name)
-
-                save_image(augmentation, new_path)
-                existing.add(new_name.lower())
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 

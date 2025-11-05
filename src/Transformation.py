@@ -4,16 +4,44 @@ from pathlib import Path
 import argparse
 import matplotlib.pyplot as plt
 from plantcv import plantcv as pcv
-import numpy as np
 import os
 import sys
+from PIL import Image
+import numpy as np
+import tempfile
 
 
-def show_array(arr: np.ndarray) -> None:
-    if not isinstance(arr, np.ndarray):
-        raise TypeError(f"show_array attend un np.ndarray, pas {type(arr)}")
-    plt.imshow(arr)
-    plt.axis("off")
+def _histogram_chart_to_ndarray(chart) -> np.ndarray:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=True) as tmp:
+        pcv.print_image(img=chart, filename=tmp.name)
+        return np.array(Image.open(tmp.name).convert("RGB"))
+
+
+def _show_transforms(transformations: dict, hist_img):
+    nrows = 3
+    ncols = 3
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(5, 8))
+    gridspec = axs[0, 0].get_subplotspec().get_gridspec()
+    for a in axs[nrows - 1, :]:
+        a.remove()
+
+    for i in range(nrows * ncols):
+        axs[i // ncols][i % ncols].set_axis_off()
+
+    i = 0
+    for t, img in transformations.items():
+        array = Image.fromarray(img)
+        axs[i // ncols][i % ncols].imshow(array)
+        axs[i // ncols][i % ncols].set_title(t)
+        i += 1
+
+    subfig = fig.add_subfigure(gridspec[nrows - 1, :])
+    ax_hist = subfig.add_axes((0.1, 0.1, 0.9, 0.9))
+    ax_hist.set_axis_off()
+    ax_hist.imshow(hist_img)
+    ax_hist.set_title('histogram')
+    fig.tight_layout()
+
     plt.show()
 
 
@@ -34,20 +62,27 @@ def save_result(res: dict,
             print(f"saved: {out_k}")
 
 
-def transform_single_file(path: str, options: Options, transform: str):
-    t = Transformation()
+def transform_single_file(path: str, options: Options):
+    # Need to apply and display all transforms
+    transformations = Transformation()
+    attributes = dir(Transformation)
+    res = {}
 
-    fn = getattr(t, transform)
-    if fn is None:
-        print(f"Error: The transformation doesn't exist: {transform}")
-        return
-    res = fn(path, options)
+    hist_img = None
 
-    if res is None:
-        print("Nothing to do")
-        return
+    for at in attributes:
+        if not at.startswith('_') and at != 'histogram':
+            fn = getattr(transformations, at)
+            res[at] = fn(path, options)["display"]
 
-    show_array(res["display"])
+        elif at == 'histogram':
+            try:
+                out = getattr(transformations, at)(path, options)
+                hist_img = _histogram_chart_to_ndarray(out["display"])
+            except Exception as e:
+                print(f"[warn] histogram failed: {e}")
+
+    _show_transforms(res, hist_img)
 
 
 def transform_for_directory(dirpath: str, options: Options, transform: str):
@@ -122,7 +157,7 @@ def main():
     if is_dir:
         transform_for_directory(src, options, transform=args.transformation)
     elif os.path.isfile(src):
-        transform_single_file(src, options, transform=args.transformation)
+        transform_single_file(src, options)
 
 
 if __name__ == "__main__":

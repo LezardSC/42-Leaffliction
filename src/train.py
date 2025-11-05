@@ -12,15 +12,12 @@ import torch.nn as nn
 import torch
 from torch.autograd import Variable
 import os
+import zipfile
 
 
-batch_size = 8
+batch_size = 16
 number_of_labels = 4
 size_test_set = 200
-classes = ('Black Rot', 'Healthy', 'Rust', 'Scab')
-
-# Instantiate a neural network model
-model = Network(batch_size)
 
 
 def prepare_datasets(training_dir: str, checkpoints_dir: str):
@@ -72,7 +69,7 @@ def prepare_datasets(training_dir: str, checkpoints_dir: str):
 
 
 # Function to test the model with the test dataset
-def testAccuracy(test_loader):
+def test_accuracy(model, test_loader):
 
     model.eval()
     accuracy = 0.0
@@ -95,7 +92,7 @@ def testAccuracy(test_loader):
 
 
 # Training function.
-def train(num_epochs, train_loader, test_loader, checkpoint_dir):
+def train(model, num_epochs, train_loader, test_loader, checkpoint_dir):
 
     # Define the loss function and optimizer
     loss_fn = nn.CrossEntropyLoss()
@@ -142,7 +139,7 @@ def train(num_epochs, train_loader, test_loader, checkpoint_dir):
             running_loss += loss.item()     # extract the loss value
 
         # Compute and print the average accuracy for this epoch
-        accuracy = testAccuracy(test_loader=test_loader)
+        accuracy = test_accuracy(model=model, test_loader=test_loader)
         scheduler.step(accuracy)
         print(f"Current LR: {scheduler.get_last_lr()[0]:.6f}")
         print('[%d] loss: %.3f' %
@@ -152,10 +149,28 @@ def train(num_epochs, train_loader, test_loader, checkpoint_dir):
               'the test accuracy over the whole test set is %d %%\n' %
               (accuracy))
 
-        torch.save(model.state_dict(), os.path.join(checkpoint_dir, "lastModel.pth"))
+        torch.save(model.state_dict(),
+                   os.path.join(checkpoint_dir, "lastModel.pth"))
         if accuracy > best_accuracy:
             best_accuracy = accuracy
-            torch.save(model.state_dict(), os.path.join(checkpoint_dir, "bestModel.pth"))
+            torch.save(model.state_dict(),
+                       os.path.join(checkpoint_dir, "bestModel.pth"))
+
+
+def store_model_compressed(src_path: str, model_path: str):
+    with zipfile.ZipFile('./test.zip', 'w') as zipf:
+        for dirpath, dirnames, filenames in os.walk(src_path):
+            for filename in filenames:
+                file_path = os.path.join(dirpath, filename)
+                archive_file_path = os.path.relpath(file_path, src_path)
+                zipf.write(file_path,
+                           os.path.join(src_path, archive_file_path))
+        for dirpath, dirnames, filenames in os.walk(model_path):
+            for filename in filenames:
+                file_path = os.path.join(dirpath, filename)
+                archive_file_path = os.path.relpath(file_path, model_path)
+                zipf.write(file_path,
+                           os.path.join(model_path, archive_file_path))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -181,9 +196,17 @@ if __name__ == "__main__":
     args = build_parser().parse_args()
 
     # Let's build our model
-    train_loader, test_loader = prepare_datasets(args.src, checkpoints_dir=args.models_dir)
-    train(num_epochs=8, train_loader=train_loader, test_loader=test_loader, checkpoint_dir=args.models_dir)
+    model = Network()
+    train_loader, test_loader = prepare_datasets(args.src, args.models_dir)
+    train(model=model,
+          num_epochs=20,
+          train_loader=train_loader,
+          test_loader=test_loader,
+          checkpoint_dir=args.models_dir)
     print('Finished Training')
 
     # Test which classes performed well
-    testAccuracy(test_loader=test_loader)
+    test_accuracy(model=model, test_loader=test_loader)
+
+    # Store the model and augmented dataset
+    store_model_compressed(args.src, args.models_dir)
