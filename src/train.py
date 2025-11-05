@@ -15,7 +15,7 @@ import os
 import zipfile
 
 
-batch_size = 8
+batch_size = 16
 number_of_labels = 4
 size_test_set = 200
 
@@ -139,7 +139,7 @@ def train(model, num_epochs, train_loader, test_loader, checkpoint_dir):
             running_loss += loss.item()     # extract the loss value
 
         # Compute and print the average accuracy for this epoch
-        accuracy = test_accuracy(test_loader=test_loader)
+        accuracy = test_accuracy(model=model, test_loader=test_loader)
         scheduler.step(accuracy)
         print(f"Current LR: {scheduler.get_last_lr()[0]:.6f}")
         print('[%d] loss: %.3f' %
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     model = Network()
     train_loader, test_loader = prepare_datasets(args.src, args.models_dir)
     train(model=model,
-          num_epochs=8,
+          num_epochs=20,
           train_loader=train_loader,
           test_loader=test_loader,
           checkpoint_dir=args.models_dir)
