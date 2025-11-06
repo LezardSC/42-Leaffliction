@@ -29,7 +29,8 @@ def prepare_datasets(training_dir: str, checkpoints_dir: str, fruit: str):
                                num_workers=0)
 
     compute_mean_std(_stats_loader, fruit)
-    mean, std = read_mean_std(os.path.join(checkpoints_dir, 'mean_std' + fruit + '.csv'))
+    mean, std = read_mean_std(os.path.join(checkpoints_dir,
+                                           'mean_std' + fruit + '.csv'))
     print(f"the mean of the dataset is {mean}, and the std is {std}")
 
     # Define transformations for the training and test sets
@@ -212,7 +213,9 @@ if __name__ == "__main__":
 
     # Let's build our model
     model = Network()
-    train_loader, test_loader = prepare_datasets(args.src, args.models_dir, args.fruit)
+    train_loader, test_loader = prepare_datasets(args.src,
+                                                 args.models_dir,
+                                                 args.fruit)
     train(model=model,
           num_epochs=20,
           train_loader=train_loader,

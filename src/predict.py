@@ -169,7 +169,6 @@ def main():
     model = Network()
     model.load_state_dict(torch.load(args.model + 'bestModel' +
                                      args.fruit + '.pth'))
-    
 
     if os.path.isdir(args.src):
         predict_dataset(model, args.src, args.model, args.fruit)
