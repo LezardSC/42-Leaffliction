@@ -20,7 +20,7 @@ number_of_labels = 4
 size_test_set = 200
 
 
-def prepare_datasets(training_dir: str, checkpoints_dir: str):
+def prepare_datasets(training_dir: str, checkpoints_dir: str, fruit: str):
     _stats_transform = transforms.Compose([transforms.ToTensor()])
     _stats_dataset = ImageFolder(root=training_dir, transform=_stats_transform)
     _stats_loader = DataLoader(dataset=_stats_dataset,
@@ -28,8 +28,8 @@ def prepare_datasets(training_dir: str, checkpoints_dir: str):
                                shuffle=False,
                                num_workers=0)
 
-    compute_mean_std(_stats_loader)
-    mean, std = read_mean_std(os.path.join(checkpoints_dir, 'mean_std.csv'))
+    compute_mean_std(_stats_loader, fruit)
+    mean, std = read_mean_std(os.path.join(checkpoints_dir, 'mean_std' + fruit + '.csv'))
     print(f"the mean of the dataset is {mean}, and the std is {std}")
 
     # Define transformations for the training and test sets
@@ -69,7 +69,7 @@ def prepare_datasets(training_dir: str, checkpoints_dir: str):
 
 
 # Function to test the model with the test dataset
-def test_accuracy(model, test_loader):
+def test_accuracy(model: Network, test_loader: DataLoader):
 
     model.eval()
     accuracy = 0.0
@@ -92,7 +92,12 @@ def test_accuracy(model, test_loader):
 
 
 # Training function.
-def train(model, num_epochs, train_loader, test_loader, checkpoint_dir, fruit):
+def train(model: Network,
+          num_epochs: int,
+          train_loader: DataLoader,
+          test_loader: DataLoader,
+          checkpoint_dir: str,
+          fruit: str):
 
     # Define the loss function and optimizer
     loss_fn = nn.CrossEntropyLoss()
@@ -207,12 +212,13 @@ if __name__ == "__main__":
 
     # Let's build our model
     model = Network()
-    train_loader, test_loader = prepare_datasets(args.src, args.models_dir)
+    train_loader, test_loader = prepare_datasets(args.src, args.models_dir, args.fruit)
     train(model=model,
           num_epochs=20,
           train_loader=train_loader,
           test_loader=test_loader,
-          checkpoint_dir=args.models_dir)
+          checkpoint_dir=args.models_dir,
+          fruit=args.fruit,)
     print('Finished Training')
 
     # Test which classes performed well

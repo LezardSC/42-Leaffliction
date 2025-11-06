@@ -59,8 +59,8 @@ def _display_result(img, classification: str):
     plt.show()
 
 
-def _prepare_testing_dataset(dataset_path: str, model_path: str):
-    mean, std = read_mean_std(model_path + 'mean_std.csv')
+def _prepare_testing_dataset(dataset_path: str, model_path: str, fruit: str):
+    mean, std = read_mean_std(model_path + 'mean_std' + fruit + '.csv')
     print(f"the mean of the dataset is {mean}, and the std is {std}")
 
     # Define transformations for the training and test sets
@@ -87,10 +87,10 @@ def _prepare_testing_dataset(dataset_path: str, model_path: str):
 def predict_data(model: Network,
                  img_path: str,
                  model_path: str,
-                 fruit_diseases):
+                 fruit: str):
 
     # Define tranformations
-    mean, std = read_mean_std(model_path + 'mean_std.csv')
+    mean, std = read_mean_std(model_path + 'mean_std' + fruit + '.csv')
     transformations = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
@@ -104,6 +104,7 @@ def predict_data(model: Network,
     output = model(input)
     _, predicted = torch.max(output.data, 1)
 
+    fruit_diseases = get_fruit_diseases(fruit)
     classes = fruit_diseases.value
     _display_result(img, classes[predicted])
 
@@ -112,13 +113,13 @@ def predict_data(model: Network,
 def predict_dataset(model: Network,
                     dataset_path: str,
                     model_path: str,
-                    fruit_disease):
+                    fruit: str):
 
     model.eval()
     accuracy = 0.0
     total = 0.0
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    test_loader = _prepare_testing_dataset(dataset_path, model_path)
+    test_loader = _prepare_testing_dataset(dataset_path, model_path, fruit)
 
     with torch.no_grad():
         for data in tqdm(test_loader, desc="Testing", leave=False):
@@ -168,12 +169,12 @@ def main():
     model = Network()
     model.load_state_dict(torch.load(args.model + 'bestModel' +
                                      args.fruit + '.pth'))
-    fruit_diseases = get_fruit_diseases(args.fruit)
+    
 
     if os.path.isdir(args.src):
-        predict_dataset(model, args.src, args.model, fruit_diseases)
+        predict_dataset(model, args.src, args.model, args.fruit)
     else:
-        predict_data(model, args.src, args.model, fruit_diseases)
+        predict_data(model, args.src, args.model, args.fruit)
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ def iter_images(dirpath, recursive=False):
 
 # Mean and standard deviation for images normalization #
 
-def compute_mean_std(dataloader):
+def compute_mean_std(dataloader, fruit):
     channels_sum, channels_squared_sum, num_batches = 0, 0, 0
     for data, _ in dataloader:
         # Mean over batch, height and width, but not over the channels
@@ -77,7 +77,7 @@ def compute_mean_std(dataloader):
 
     if not os.path.exists('./models'):
         os.makedirs('./models')
-    with open('./models/mean_std.csv', 'w') as csvfile:
+    with open('./models/mean_std' + fruit + '.csv', 'w') as csvfile:
         fieldnames = ['Image', 'Mean', 'Std']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
