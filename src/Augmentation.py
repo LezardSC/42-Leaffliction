@@ -15,10 +15,10 @@ AUGMENTATIONS = {
     "rotate": T.RandomChoice([T.RandomRotation([45, 45]),
                               T.RandomRotation([-45, -45])],
                              p=[0.5, 0.5]),
-    "illumination": T.ColorJitter(brightness=0.3,
-                                  contrast=0.3,
-                                  saturation=0.3,
-                                  hue=0.1),
+    "illumination": T.ColorJitter(brightness=0.4,
+                                  contrast=0.4,
+                                  saturation=0.4,
+                                  hue=0.2),
     "blur": T.GaussianBlur(kernel_size=5, sigma=(1.0, 3.0)),
     "crop": T.RandomResizedCrop(size=256, scale=(0.8, 1.0), ratio=(0.9, 1.1)),
     "distortion": T.RandomPerspective(distortion_scale=0.3, p=1.0),
@@ -27,8 +27,7 @@ AUGMENTATIONS = {
 
 def _show_augmentations_grid(augmentations: dict, nrows, ncols):
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7, 6))
-    gridspec = axs[0, 0].get_subplotspec().get_gridspec
-    
+
     for i in range(nrows * ncols):
         axs[i // ncols][i % ncols].set_axis_off()
 
@@ -64,7 +63,8 @@ def augment_single_file(path: str):
         save_image(augmentation_img, new_path)
         print(f"Saved: {new_path}")
 
-        augmentations_to_draw[transformation_name] = augmentation_img.permute(1, 2, 0).detach().numpy()
+        augmentations_to_draw[transformation_name] = \
+            augmentation_img.permute(1, 2, 0).detach().numpy()
 
     _show_augmentations_grid(
         augmentations_to_draw,
@@ -160,8 +160,6 @@ def augmentation(data_path=None):
         augment_images_until_equal(data, subfolders)
     elif os.path.isfile(src):
         augment_single_file(src)
-        
-
 
 
 if __name__ == "__main__":
