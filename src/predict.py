@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from classes.Network import Network
-from utils.utils import read_mean_std
+from utils.utils import read_mean_std, get_fruit_diseases
 
 import argparse
 
@@ -59,8 +59,8 @@ def _display_result(img, classification: str):
     plt.show()
 
 
-def _prepare_testing_dataset(dataset_path: str, stats_path: str):
-    mean, std = read_mean_std(stats_path)
+def _prepare_testing_dataset(dataset_path: str, model_path: str, fruit: str):
+    mean, std = read_mean_std(model_path + 'mean_std' + fruit + '.csv')
     print(f"the mean of the dataset is {mean}, and the std is {std}")
 
     # Define transformations for the training and test sets
@@ -84,17 +84,13 @@ def _prepare_testing_dataset(dataset_path: str, stats_path: str):
     return test_loader
 
 
-def _get_classes(path: str):
-    classes = []
-    for subfolder in os.listdir(path):
-        if subfolder[0] != '.':
-            classes.append(subfolder)
-    return classes
+def predict_data(model: Network,
+                 img_path: str,
+                 model_path: str,
+                 fruit: str):
 
-
-def predict_data(model: Network, img_path: str, stats_path: str):
     # Define tranformations
-    mean, std = read_mean_std(stats_path)
+    mean, std = read_mean_std(model_path + 'mean_std' + fruit + '.csv')
     transformations = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
@@ -108,18 +104,22 @@ def predict_data(model: Network, img_path: str, stats_path: str):
     output = model(input)
     _, predicted = torch.max(output.data, 1)
 
-    classes = _get_classes(img_path.split('/')[0])
+    fruit_diseases = get_fruit_diseases(fruit)
+    classes = fruit_diseases.value
     _display_result(img, classes[predicted])
 
 
 # Function to test the model with the test dataset
-def predict_dataset(model, dataset_path, stats_path):
+def predict_dataset(model: Network,
+                    dataset_path: str,
+                    model_path: str,
+                    fruit: str):
 
     model.eval()
     accuracy = 0.0
     total = 0.0
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    test_loader = _prepare_testing_dataset(dataset_path, stats_path)
+    test_loader = _prepare_testing_dataset(dataset_path, model_path, fruit)
 
     with torch.no_grad():
         for data in tqdm(test_loader, desc="Testing", leave=False):
@@ -140,7 +140,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "-i", "--img",
+        "-s", "--src",
         type=str,
         default="Apple/Apple_rust/image (1).JPG",
         help="The image or folder that you want to predict."
@@ -149,15 +149,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-m", "--model",
         type=str,
-        default="models/bestModel.pth",
+        default="models/",
         help="Path to the pytorch model (.pth)"
     )
 
     parser.add_argument(
-        "-s", "--stats",
+        "-f", "--fruit",
         type=str,
-        default="models/mean_std.csv",
-        help="Mean and Standard Deviation used to normalize data (.csv)"
+        choices={"Apple", "Grape"},
+        default="Apple",
+        help="The fruit leaf you want to predict"
     )
 
     return parser
@@ -166,12 +167,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main():
     args = build_parser().parse_args()
     model = Network()
-    model.load_state_dict(torch.load(args.model))
+    model.load_state_dict(torch.load(args.model + 'bestModel' +
+                                     args.fruit + '.pth'))
 
-    if os.path.isdir(args.img):
-        predict_dataset(model, args.img, args.stats)
+    if os.path.isdir(args.src):
+        predict_dataset(model, args.src, args.model, args.fruit)
     else:
-        predict_data(model, args.img, args.stats)
+        predict_data(model, args.src, args.model, args.fruit)
 
 
 if __name__ == "__main__":
