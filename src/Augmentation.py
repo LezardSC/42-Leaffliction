@@ -155,7 +155,6 @@ def augmentation(data_path=None):
     is_dir = os.path.isdir(src)
 
     if is_dir:
-        delete_augmented_images(src)
         subfolders: dict = count_images(data)
         augment_images_until_equal(data, subfolders)
     elif os.path.isfile(src):
