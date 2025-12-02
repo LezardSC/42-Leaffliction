@@ -7,7 +7,6 @@ import argparse
 import random
 
 from utils.utils import get_path, count_images
-from utils.delete_augmented_image import delete_augmented_images
 
 
 AUGMENTATIONS = {

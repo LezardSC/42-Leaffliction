@@ -2,6 +2,7 @@
 /Apple
 /Grape
 /venv
+.venv/
 *__pycache__/
 .DS_Store
 transformations/

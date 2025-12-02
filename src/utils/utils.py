@@ -11,7 +11,7 @@ class FruitDisease(Enum):
 
 
 def get_fruit_diseases(fruit: str) -> FruitDisease:
-    match(fruit):
+    match fruit:
         case 'Apple':
             return FruitDisease.APPLE
         case 'Grape':
