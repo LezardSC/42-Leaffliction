@@ -146,7 +146,7 @@ class Transformation:
         # Cleaning
         m = pcv.dilate(gray_img=m, ksize=5, i=1)
         m = pcv.erode(gray_img=m, ksize=5, i=1)
-        # m = pcv.fill_holes(bin_img=m)
+        m = pcv.fill_holes(bin_img=m)
         h, w = img.shape[:2]
         roi = pcv.roi.rectangle(img=img, x=0, y=0, w=w, h=h)
         labeled = pcv.roi.filter(mask=m, roi=roi, roi_type="largest")

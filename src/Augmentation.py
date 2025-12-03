@@ -17,7 +17,7 @@ AUGMENTATIONS = {
     "illumination": T.ColorJitter(brightness=0.4,
                                   contrast=0.4,
                                   saturation=0.4,
-                                  hue=0.2),
+                                  hue=0),
     "blur": T.GaussianBlur(kernel_size=5, sigma=(1.0, 3.0)),
     "crop": T.RandomResizedCrop(size=256, scale=(0.8, 1.0), ratio=(0.9, 1.1)),
     "distortion": T.RandomPerspective(distortion_scale=0.3, p=1.0),
