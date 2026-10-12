@@ -30,17 +30,17 @@ class Transformation:
             for x_img in range(len(img[y_img])):
                 if ((x - x_img) * (x - x_img) +
                         (y - y_img) * (y - y_img) <= size * size):
-                    img[y_img][x_img] = [255, 0, 0]
+                    img[y_img][x_img] = [0, 0, 255]  # red (BGR)
 
     def _draw_rectangle(self, img, x: int, y: int, length: int, height: int):
         for y_img in range(len(img)):
             for x_img in range(len(img[y_img])):
                 if ((y_img == y or y_img == y + height) and
                         x_img > x and x_img < x + length):
-                    img[y_img][x_img] = [0, 0, 255]
+                    img[y_img][x_img] = [255, 0, 0]  # blue (BGR)
                 if ((x_img == x or x_img == x + length) and
                         y_img > y and y_img < y + height):
-                    img[y_img][x_img] = [0, 0, 255]
+                    img[y_img][x_img] = [255, 0, 0]
 
     def _find_roi(self, mask):
         maskindex = np.where(mask == 255)
@@ -192,8 +192,6 @@ class Transformation:
         # Characterize object shapes
         shape_image = pcv.analyze.size(img=img, labeled_mask=mask, n_labels=1)
 
-        # Save returned images with more specific naming
-        pcv.print_image(shape_image, '/home/malia/setaria_shape_img.png')
         return {
             "tag": "analyze",
             "display": shape_image,

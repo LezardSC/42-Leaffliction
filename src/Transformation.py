@@ -1,5 +1,5 @@
 from utils.utils import iter_images
-from classes.Transformation import Transformation, Options
+from classes.leaf_transformations import Transformation, Options
 from pathlib import Path
 import argparse
 import matplotlib.pyplot as plt
@@ -30,6 +30,8 @@ def _show_transforms(transformations: dict, hist_img):
 
     i = 0
     for t, img in transformations.items():
+        if img.ndim == 3:
+            img = img[:, :, ::-1]   # plantcv works in BGR, matplotlib in RGB
         array = Image.fromarray(img)
         axs[i // ncols][i % ncols].imshow(array)
         axs[i // ncols][i % ncols].set_title(t)

@@ -45,8 +45,7 @@ def count_images(dataset: str) -> dict:
     for subfolder in os.listdir(dataset):
         path = os.path.join(dataset, subfolder)
         if os.path.isdir(path):
-            files = [f for f in os.listdir(path)]
-            count = len(files)
+            count = sum(1 for _ in iter_images(path))
             subfolders[subfolder] = count
 
     return subfolders
